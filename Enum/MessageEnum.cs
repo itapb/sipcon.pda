@@ -1,0 +1,156 @@
+﻿namespace Sipcon.Mobile.WebApp.Enum
+{
+    
+
+    public class StringValueAttribute : Attribute
+    {
+        public string Value { get; }
+
+        public StringValueAttribute(string value)
+        {
+            Value = value;
+        }
+    }
+
+    public static class EnumExtensions
+    {
+        public static string GetStringValue(this MessageEnum enumValue) 
+        {
+            return enumValue.GetType().GetMember(enumValue.ToString())
+                .FirstOrDefault(m => m.GetCustomAttributes(typeof(StringValueAttribute), false)
+                    .Cast<StringValueAttribute>()
+                    .FirstOrDefault() != null)
+                ?.GetCustomAttributes(typeof(StringValueAttribute), false)
+                .Cast<StringValueAttribute>()
+                .FirstOrDefault()?.Value ?? "Error mensaje!....";
+        }
+    }
+
+    public enum MessageEnum
+    {
+        // General
+        [StringValue("Registro guardado satisfactoriamente...")]
+        SaveOK,
+        [StringValue("Problemas al guardar registro!...")]
+        SaveNotOK,
+        [StringValue("Problemas al cargar registro!...")]
+        GetError,
+
+        [StringValue("Registro eliminado satisfactoriamente...")]
+        DeleteOK,
+        [StringValue("Problemas al eliminar registro!...")]
+        DeleteNotOK,
+
+        // ActionsMethod
+        [StringValue("Acción no reconocida!...")]
+        ActionsError,
+
+        // Vehicle
+        [StringValue("Vehiculo no existe!...")]
+        SearchVehicleNotOK,
+
+        // Contact
+        [StringValue("Cliente no existe!...")]
+        SearchContactNotOK,
+
+        // Imports
+        [StringValue("Archivo importado Satisfactoriamente...")]
+        ImportOK,
+        [StringValue("Problemas al importar Archivo!...")]
+        ImportNotOK,
+        [StringValue("Error al importar Archivo, esta vacio!...")]
+        ImportError,
+        [StringValue("Tamaño del archivo excede el limite maximo permitido de 10MB!...")]
+        ImportErrorMaxByte,
+
+        // Exports
+        [StringValue("Problemas al exportar Archivo!...")]
+        ExportNotOK,
+
+        // Activate
+        [StringValue("Registro activado Satisfactoriamente...")]
+        ActivateOK,
+        [StringValue("Problemas al activar registros!...")]
+        ActivateNotOK,
+
+        // Desactivate
+        [StringValue("Registro inactivado Satisfactoriamente...")]
+        DeactivateOK,
+        [StringValue("Problemas al inactivar registros!...")]
+        DeactivateNotOK,
+
+        //Assign
+        [StringValue("Registro asignado Satisfactoriamente...")]
+        AssignOK,
+        [StringValue("Problemas al asignar Registros!...")]
+        AssignNotOK,
+
+        //Unassign
+        [StringValue("Registro Desasignado Satisfactoriamente...")]
+        UnassignOK,
+        [StringValue("Problemas al desasignar Registros!...")]
+        UnassignNotOK,
+
+        //Available
+        [StringValue("Registro habilitado Satisfactoriamente...")]
+        AvailableOK,
+        [StringValue("Problemas al habilitar Registros!...")]
+        AvailableNotOK,
+
+        //Unavailable
+        [StringValue("Registro inhabilitado Satisfactoriamente...")]
+        UnavailableOK,
+        [StringValue("Problemas al inhabilitar Registros!...")]
+        UnavailableNotOK,
+
+
+        // Bloquear
+        [StringValue("Registro bloqueado Satisfactoriamente...")]
+        LockOK,
+        [StringValue("Problemas al bloquear registros!...")]
+        LockNotOK,
+
+        // Desbloquear
+        [StringValue("Registro desbloqueado Satisfactoriamente...")]
+        UnLockOK,
+        [StringValue("Problemas al desbloquear registros!...")]
+        UnLockNotOK,
+
+        // Generate
+        [StringValue("Registro Generado Satisfactoriamente...")]
+        GenerateOK,
+        [StringValue("Problemas al Generar registros!...")]
+        GenerateNotOK,
+
+        // ToValidate
+        [StringValue("Registro pre-Validado Satisfactoriamente...")]
+        ToValidateOK,
+        [StringValue("Problemas al pre-Validar registros!...")]
+        ToValidateNotOK,
+
+        // Validate
+        [StringValue("Registro Validado Satisfactoriamente...")]
+        ValidateOK,
+        [StringValue("Problemas al Validar registros!...")]
+        ValidateNotOK,
+
+        // ToApprove
+        [StringValue("Registro pre-Aprobado Satisfactoriamente...")]
+        ToApproveOK,
+        [StringValue("Problemas al pre-Aprobar registros!...")]
+        ToApproveNotOK,
+
+        // Approve
+        [StringValue("Registro Aprobado Satisfactoriamente...")]
+        ApproveOK,
+        [StringValue("Problemas al Aprobar registros!...")]
+        ApproveNotOK,
+
+        // Decline
+        [StringValue("Registro Rechazado Satisfactoriamente...")]
+        DeclineOK,
+        [StringValue("Problemas al Rechazar registros!...")]
+        DeclineNotOK,
+    }
+
+}

@@ -1,0 +1,18 @@
+﻿﻿﻿﻿<div class="loader loader-bouncing"><span>Redireccionando a Login...</span></div>
+
+@code { [Inject] private UserSession Session { get; set; } = null!;
+    [Inject]
+    public NavigationManager? navigationManager { get; set; }
+    [Inject] private Repository.Auth.AuthenticationProviderJWT _authenticationStateProvider { get; set; } = null!;
+    private bool _initialized;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            var relativePath = navigationManager!.ToBaseRelativePath(navigationManager.Uri);
+            navigationManager!.NavigateTo($"{navigationManager.BaseUri}login");
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+}

@@ -1,0 +1,176 @@
+﻿@* @page "/mobile-guides" *@
+@using Sipcon.Mobile.WebApp.Layout
+@layout MobileLayout
+<div style="flex-shrink: 0;" class="pa-3 jpv1-dialog-body-background">
+    <MudPaper Elevation="2" Class="pa-3">
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudStack Row="false" Class="pa-2 mud-theme-info mud-typography-h6" Spacing="1" style="line-height:1.1;">
+                    <div>CLIENTE : @currentDispatch?.CustomerName</div>
+                    <div>GUIAS</div>
+                </MudStack>
+            </MudItem>
+            <MudItem xs="12">
+                <MudText>
+                    <MudDataGrid @ref="GuidesMudDataGrid" T="Models.Guide" ServerData="ServerReload" Striped="true" Hover="true" Filterable="false" Loading="_loading" SelectedItemChanged="ClickSelectGuide" @bind-CurrentPage="GuideCurrentPage" ShowColumnOptions="false" Class="hide-datagrid-headers">
+                        <Columns>
+                            <PropertyColumn Property="x => x.Id" Title="" CellClass="d-flex justify-center align-center" />
+                        </Columns>
+                    </MudDataGrid>
+                </MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string" @bind-Value="searchString" Placeholder="Buscar" HelperId="custom-helper-text" TextUpdateSuppression="@IsTextUpdateSuppression" OnAdornmentClick="OnSearchClicK" HelperText="@mHelpText" OnKeyUp="CodeFieldOnKeyUp" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Style="height:40px;" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudStack Row="true" Justify="Justify.Center">
+                    <MudStack Row="true" Spacing="5">
+                        <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Size="Size.Medium" OnClick="ClickAddGuide" />
+                        <MudFab Color="Color.Info" StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Medium" OnClick="ClickRefreshGuides" />
+                        <MudFab Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Close" Size="Size.Medium" OnClick="ClickCloseGuides" />
+                    </MudStack>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</div>
+<style>
+    .hide-datagrid-headers .mud-table-head {
+        display: none !important;
+    }
+
+    #custom-helper-text {
+        font-size: 1rem;
+        color: @(IsTextUpdateSuppression ? "red" : "blue");
+        font-style: italic;
+    }
+</style>
+@code { [Inject] private UserSession Session { get; set; } = null!;
+    [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!;
+    [Inject] private HttpClient Http { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Parameter] public Models.Dispatch? currentDispatch { get; set; }
+    [Parameter] public Models.DispatchStep Value { get; set; }
+    [Parameter] public EventCallback<Models.DispatchStep> ValueChanged { get; set; }
+    private Models.DispatchStep CurrentStep
+    {
+        get => Value;
+        set
+        {
+            if (Value != value)
+            {
+                Value = value;
+                ValueChanged.InvokeAsync(Value);
+            }
+        }
+    }
+
+    bool IsTextUpdateSuppression = true;
+    string mHelpText = "";
+
+    bool _loading = true;
+    string searchString = "";
+    private int GuideCurrentPage = 0;
+    private MudDataGrid<Models.Guide>? GuidesMudDataGrid;
+
+
+    Func<Models.Guide, object> GetSortKeySelector(string sortByPropertyName) => sortByPropertyName switch
+    {
+        nameof(Models.Guide.Id) => o => o.Id ?? 0,
+        _ => null!
+    };
+
+    private async Task<GridData<Models.Guide>> ServerReload(GridState<Models.Guide> state)
+    {
+        await AuthenticationStateProvider.RefresMobileStaticVariables();
+        currentDispatch!.UserId = Session.UserId;
+        currentDispatch!.SupplierId = Session.SupplierId;
+
+        _loading = true;
+        var totalItems = 0;
+        var mOffset = state.Page * state.PageSize;
+        IEnumerable<Models.Guide> data = new List<Models.Guide>();
+        HttpResponseMessage response = await Http.GetAsync($"api/Packing/GetGuides?supplierId={currentDispatch!.SupplierId}&customerId={currentDispatch.CustomerId}&userId={currentDispatch.UserId}");
+        if (response.IsSuccessStatusCode)
+        {
+            if (await response.Content.ReadFromJsonAsync<WebApiResponse<List<Models.Guide>>>() is WebApiResponse<List<Models.Guide>> content2 && content2?.data is List<Models.Guide> datalist)
+            {
+                if (!String.IsNullOrEmpty(searchString) && datalist.Where(r => (r.Id != null && r.Id.ToString()!.Contains(searchString.Trim(), StringComparison.OrdinalIgnoreCase))).FirstOrDefault() is Models.Guide GuideItem)
+                {
+                    await ClickSelectGuide(GuideItem);
+                }
+                data = datalist;
+                totalItems = data.Count();
+                if (state.SortDefinitions.FirstOrDefault() is SortDefinition<Models.Guide> sortDefinition)
+                    data = data.OrderByDirection(sortDefinition.Descending ? SortDirection.Descending : SortDirection.Ascending, GetSortKeySelector(sortDefinition.SortBy));
+            }           
+            
+        }
+        else
+        {
+            var errorMessage = await response.Content.ReadAsStringAsync();
+            await DialogService.ShowDialog(errorMessage!, "Error", "OK", Color.Error, Icons.Material.Filled.Error);          
+        }
+
+     
+        mHelpText = !String.IsNullOrEmpty(searchString) ? $"No se encontro {searchString.TrimEnd()}" : "";
+        searchString = string.Empty;
+        StateHasChanged();
+        IsTextUpdateSuppression = true;
+
+        _loading = false;
+        return new GridData<Models.Guide> { TotalItems = totalItems, Items = data };
+    }
+
+    private async Task ClickRefreshGuides(MouseEventArgs ev)
+    {
+        await GuidesMudDataGrid!.ReloadServerData();
+    }
+
+    private async Task ClickSelectGuide(Models.Guide item)
+    {
+        currentDispatch!.GuideId = item.Id ?? 0;
+        currentDispatch.GuideClosed = item.Closed;
+        CurrentStep = Models.DispatchStep.GuideDetails;
+        await Task.CompletedTask;
+    }
+    private async Task ClickCloseGuides(MouseEventArgs args)
+    {
+        CurrentStep = Models.DispatchStep.Customer;
+        await Task.CompletedTask;
+    }
+    private async Task ClickAddGuide(MouseEventArgs args)
+    {
+        var result_Post_Zone = await Http.PostAsync($"api/Packing/NewGuide?supplierId={currentDispatch?.SupplierId}&customerId={currentDispatch?.CustomerId}&userId={currentDispatch?.UserId}", null);
+        if (result_Post_Zone.IsSuccessStatusCode)
+        {
+            var result = await DialogService.ShowDialog(Useful.OkSavedMessage, "Nueva Guia", "OK", Color.Info, Icons.Material.Filled.Commit);
+            if (!result!.Canceled)
+            {
+                await GuidesMudDataGrid!.ReloadServerData();
+            }
+
+        }
+    } 
+    private async Task SearchGuide()
+    {
+        IsTextUpdateSuppression = false;
+        mHelpText = "Espere por favor...";
+        await GuidesMudDataGrid!.ReloadServerData();
+    }
+    private async Task OnSearchClicK(MouseEventArgs args)
+    {
+        if (searchString.Length >= 3)
+        {
+            await SearchGuide();
+        }
+
+    }
+    private async Task CodeFieldOnKeyUp(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && searchString.Length >= 3)
+        {
+            await SearchGuide();
+        }
+    }
+}
