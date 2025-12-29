@@ -3,7 +3,7 @@
 @using Sipcon.Mobile.WebApp.Pages.Mobile.Models
 @layout MobileLayout
 
-<div style="flex-shrink: 0;" class="pa-3 jpv1-dialog-body-background">
+<div style="flex-shrink: 0;" class="pa-3 jpv1-dialog-body-background" @onclick:stopPropagation="true">
     <MudPaper Elevation="2" Class="pa-3">
         <MudGrid Spacing="2">
             <MudItem xs="12">
@@ -15,34 +15,117 @@
                 </MudStack>
             </MudItem>
             <MudItem xs="12">
-                <MudText>
-                    <MudDataGrid @ref="PackingListMudDataGrid" T="Models.PackageList" ServerData="ServerReload" Striped="true" Hover="true" Loading="_loading" Filterable="false" FixedHeader  @bind-CurrentPage="GuideCurrentPage" ShowColumnOptions="false" Class="hide-datagrid-headers" >
-                        <Columns>
-                            <TemplateColumn>
-                                <CellTemplate>
-                                    <MudItem xs="12">
-                                        <MudStack Row="true" StretchItems="StretchItems.Start" Justify="Justify.FlexEnd" Spacing="2">
-                                            <div>@context.Item.PartInnerCode</div>
-                                            <div>@context.Item.PartName</div>
-                                            <div>@context.Item.Quantity</div>
-                                        </MudStack>
-                                    </MudItem>
-                                </CellTemplate>
-                            </TemplateColumn>
-                        </Columns>                        
-                    </MudDataGrid>
-                </MudText>
+                <MudTextField T="string"
+                              Margin="Margin.Dense"
+                              OnAdornmentClick="OnSearchClicK"
+                              Clearable="true"
+                              TextUpdateSuppression="@IsTextUpdateSuppression"
+                              Immediate="true"
+                              OnKeyDown="CodeFieldOnKeyDown"
+                              @bind-Value="searchString"
+                              OnClearButtonClick="OnClearClick"
+                              Placeholder="Buscar"
+                              @ref="searchStringField"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              IconSize="Size.Medium"
+                              Class="mt-0"
+                              HelperText="@mHelpText"
+                              Variant="Variant.Filled"
+                              HelperId="custom-helper-text" />
             </MudItem>
+            <!-- Vista de Búsqueda SIN Acordeón -->
             <MudItem xs="12">
-                <MudTextField T="string" Margin="Margin.Dense" OnAdornmentClick="OnSearchClicK" Clearable="true" TextUpdateSuppression="@IsTextUpdateSuppression" OnKeyUp="CodeFieldOnKeyUp" @bind-Value="searchString" OnClearButtonClick="OnClearClick" Placeholder="Buscar" @ref="searchStringField" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" HelperText="@mHelpText" Variant="Variant.Filled" HelperId="custom-helper-text" />
-                @* <MudTextField T="string" Margin="Margin.Dense"  ValueChanged="@(s => OnSearch(s))" Value="searchString" Placeholder=" Buscar" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" HelperText="@mHelpText" Variant="Variant.Filled" HelperId="custom-helper-text" /> *@
+                @if (isSearching && !string.IsNullOrEmpty(searchString) && searchString.Trim().Length >= 3)
+                {
+                    <MudPaper Elevation="1" Class="pa-2 mb-3">
+                        @if (searchResults.Any())
+                        {
+                            <MudText Typo="Typo.h6" Class="mb-3">Resultados de búsqueda</MudText>
+                            <!-- DataGrid para búsqueda -->
+                            <MudDataGrid T="Models.PackageList"
+                                         Items="@searchResults"
+                                         Striped="true"
+                                         Hover="true"
+                                         Loading="_loading"
+                                         Filterable="false"
+                                         FixedHeader="true"
+                                         Height="400px"
+                                         Class="hide-datagrid-headers">
+                                <Columns>
+                                    <TemplateColumn>
+                                        <CellTemplate>
+                                            <MudItem xs="12">
+                                                <MudStack Row="true" Justify="Justify.SpaceBetween" Style="width: 100%;" Spacing="2">
+                                                    <div style="flex: 3; text-align: left;">
+                                                        <span style="font-weight: normal;">@context.Item.PartInnerCode</span>
+                                                        <span style="margin-left: 15px;">@context.Item.PartName</span>
+                                                    </div>
+                                                    <div style="flex: 2; text-align: left;">
+                                                        @context.Item.CustomerName
+                                                    </div>
+                                                    <div style="flex: 1; text-align: right;">
+                                                        @context.Item.Quantity
+                                                    </div>
+                                                </MudStack>
+                                            </MudItem>
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                </Columns>
+                            </MudDataGrid>
+                        }
+                    </MudPaper>
+                }
+            </MudItem>
+            <!-- Vista Inicial con Acordeón -->
+            <MudItem xs="12">
+                @if (showInitialData)
+                {
+                    <MudPaper Elevation="1" Class="pa-2 mb-3">
+                        @if (groupedInitialData.Any())
+                        {
+                            <MudExpansionPanels MultiExpansion="false">
+                                @foreach (var dealerGroup in groupedInitialData)
+                                {
+                                    var itemCount = dealerGroup.Count();
+                                    var totalQuantity = dealerGroup.Sum(x => x.Quantity ?? 0);
+
+                                    <MudExpansionPanel Text="@($"{dealerGroup.Key} - {itemCount} items")"
+                                                       @key="@dealerGroup.Key">
+                                        <ChildContent>
+                                            <MudTable Items="@dealerGroup" Dense="true" Hover="true" Striped="true">
+                                                <HeaderContent>
+                                                    <MudTh>Descripción</MudTh>
+                                                    <MudTh Style="text-align: right;">Cantidad</MudTh>
+                                                </HeaderContent>
+                                                <RowTemplate>
+                                                    <MudTd DataLabel="Descripción">@context.PartName</MudTd>
+                                                    <MudTd DataLabel="Cantidad" Style="text-align: right;">@context.Quantity</MudTd>
+                                                </RowTemplate>
+                                            </MudTable>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                }
+                            </MudExpansionPanels>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info">No hay datos disponibles</MudAlert>
+                        }
+                    </MudPaper>
+                }
             </MudItem>
             <MudItem xs="12">
                 <MudStack Row="true" Justify="Justify.Center">
                     <MudStack Row="true" Spacing="5">
-                        <MudFab Color="Color.Success" StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Medium" OnClick="ClickRefreshPackingPending" />
-                        <MudFab Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Close" Size="Size.Medium" Href="process-list"  />
-                       @*  <MudFab Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.Scanner" Size="Size.Medium" OnClick="ClickScanner" /> *@
+                        <MudFab Color="Color.Success"
+                                StartIcon="@Icons.Material.Filled.Refresh"
+                                Size="Size.Medium"
+                                OnClick="ClickRefreshPackingPending" />
+                        <MudFab Color="Color.Secondary"
+                                StartIcon="@Icons.Material.Filled.Close"
+                                Size="Size.Medium"
+                                Href="process-list" />
                     </MudStack>
                 </MudStack>
             </MudItem>
@@ -50,135 +133,235 @@
     </MudPaper>
 </div>
 <style>
-    .hide-datagrid-headers .mud-table-head {
-        display: none !important;
-    }
     #custom-helper-text {
         font-size: 1rem;
         color: @(IsTextUpdateSuppression ? "red" : "blue");
         font-style: italic;
     }
 </style>
-@code { [Inject] private UserSession Session { get; set; } = null!;
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialPackingList();
+    }
+
+    [Inject] private UserSession Session { get; set; } = null!;
     [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!;
     [Inject] private HttpClient Http { get; set; } = default!;
-    [Inject] private IDialogService DialogService { get; set; } = default!;
-    bool IsTextUpdateSuppression = true;  
 
-    bool _loading = true;
-    private string searchString { get; set; } ="";    
-    private int PackageCurrentPage = 0;
-    private MudDataGrid<Models.PackageList>? PackingListMudDataGrid;
+    bool IsTextUpdateSuppression = true;
+    bool _loading = false;
+    bool _loadingInitial = true;
+    bool showInitialData = true;
+    bool isSearching = false;
+    private bool searchTriggered = false;
+
+    private string searchString { get; set; } = "";
     private MudTextField<string>? searchStringField;
-    private int GuideCurrentPage = 0;
     private string PackingCode = "";
     private string CustomerName = "";
     string mHelpText = "";
 
+    private List<Models.PackageList> initialData = new List<Models.PackageList>();
+    private List<Models.PackageList> searchResults = new List<Models.PackageList>();
+
+    // Nuevas propiedades para agrupar datos por concesionario
+    private List<IGrouping<string, Models.PackageList>> groupedInitialData = new List<IGrouping<string, Models.PackageList>>();
+
+    private void GroupData(List<Models.PackageList> data)
+    {
+        if (data == null || !data.Any())
+        {
+            groupedInitialData = new List<IGrouping<string, Models.PackageList>>();
+            return;
+        }
+
+        // Agrupar por CustomerName (concesionario)
+        var grouped = data
+            .Where(x => !string.IsNullOrWhiteSpace(x.CustomerName))
+            .GroupBy(x => (x.CustomerName ?? string.Empty).Trim())
+            .OrderBy(g => g.Key)
+            .ToList();
+
+        groupedInitialData = grouped;
+    }
 
     private async Task ClickRefreshPackingPending(MouseEventArgs ev)
     {
         mHelpText = "";
         CustomerName = "";
         PackingCode = "";
-        await PackingListMudDataGrid!.ReloadServerData();
+        searchString = "";
+        showInitialData = true;
+        isSearching = false;
+        searchTriggered = false;
+        searchResults.Clear();
+
+        await LoadInitialPackingList();
         await searchStringField!.FocusAsync();
     }
-    private async Task OnSearch(string text)
+
+    private async Task OnSearchClicK(MouseEventArgs args)
     {
-        
-        if (text.Length >= 3)
-        { 
-            searchString = text;
-            //IsTextUpdateSuppression = false; 
-            mHelpText = "Espere por favor...";
-            //StateHasChanged();
-            await PackingListMudDataGrid!.ReloadServerData(); 
-         
-        }           
+        if (searchTriggered) return;
+        searchTriggered = true;
+        try
+        {
+            await ExecuteSearch();
+        }
+        finally
+        {
+            await Task.Delay(300);
+            searchTriggered = false;
+        }
     }
-    private async Task<GridData<Models.PackageList>> ServerReload(GridState<Models.PackageList> state)
+
+    private async Task ExecuteSearch()
+    {
+        var searchTerm = searchString?.Trim() ?? "";
+
+        if (searchTerm.Length >= 3)
+        {
+            IsTextUpdateSuppression = false;
+            mHelpText = "Buscando...";
+            showInitialData = false;
+            isSearching = true;
+            StateHasChanged();
+
+            await Task.Delay(1);
+            await PerformSearch(searchTerm);
+
+            mHelpText = searchResults.Any() ? "" : "No se encontraron resultados";
+            await searchStringField!.FocusAsync();
+        }
+        else if (string.IsNullOrEmpty(searchTerm))
+        {
+            mHelpText = "";
+            showInitialData = true;
+            isSearching = false;
+            searchResults.Clear();
+            StateHasChanged();
+        }
+    }
+
+    private async Task PerformSearch(string searchTerm)
     {
         await AuthenticationStateProvider.RefresMobileStaticVariables();
         _loading = true;
-        var totalItems = 0;
-        var mOffset = state.Page * state.PageSize;
-        IEnumerable<Models.PackageList>? data = null;
+        StateHasChanged();
 
-        if (!string.IsNullOrEmpty(searchString))
+        try
         {
-            HttpResponseMessage response = await Http.GetAsync($"api/Packing/GetPackingList?supplierId={Session.SupplierId}&packageCode={searchString.TrimEnd()}");
+            HttpResponseMessage response = await Http.GetAsync($"api/Packing/GetPackageList?supplierId={Session.SupplierId}&packageCode={searchTerm}");
+
             if (response.IsSuccessStatusCode)
             {
-                var content2 = await response.Content.ReadFromJsonAsync<WebApiResponse<List<Models.PackageList>>>();
-                totalItems = content2!.total ?? 0;
-                data = content2!.data ?? new List<Models.PackageList>();
-                CustomerName = data.FirstOrDefault()?.CustomerName ?? "";
-                PackingCode = data.FirstOrDefault()?.Code ?? "";
+                var content = await response.Content.ReadFromJsonAsync<WebApiResponse<List<Models.PackageList>>>();
+                searchResults = content?.data ?? new List<Models.PackageList>();
+
+                // NO llamamos a GroupData aquí porque el buscador ya no usa acordeón
+
+                if (searchResults.Any())
+                {
+                    CustomerName = searchResults.FirstOrDefault()?.CustomerName ?? "";
+                    PackingCode = searchResults.FirstOrDefault()?.Code ?? "";
+                }
+                else
+                {
+                    CustomerName = "";
+                    PackingCode = "";
+                }
             }
             else
             {
-                var errorMessage = await response.Content.ReadAsStringAsync();
-                throw new Exception(errorMessage);
+                mHelpText = "Error en la búsqueda";
+                searchResults.Clear();
             }
-
-            totalItems = data.Count();
-
-            // Sorting
-            if (state.SortDefinitions.FirstOrDefault() is SortDefinition<Models.PackageList> sortDefinition)
-            {
-                data = data.OrderByDirection(sortDefinition.Descending ? SortDirection.Descending : SortDirection.Ascending, GetSortKeySelector(sortDefinition.SortBy));
-            }
-
-            _loading = false;
-            mHelpText = totalItems == 0 ? $"No se encontro {searchString.TrimEnd()}" : "";
         }
-        searchString = string.Empty;      
-        StateHasChanged();
-        IsTextUpdateSuppression = true;
-
-        return new GridData<Models.PackageList> { TotalItems = totalItems, Items = data ?? new List<Models.PackageList>() };
-
-    }
-    Func<Models.PackageList, object> GetSortKeySelector(string sortByPropertyName) => sortByPropertyName switch
-    {
-        nameof(Models.PackageList.PartInnerCode) => o => o.PartInnerCode ?? "",
-        nameof(Models.PackageList.PartName) => o => o.PartName ?? "",
-        nameof(Models.PackageList.Quantity) => o => o.Quantity ?? 0,
-        _ => null! //o => o.Id ?? 0 // Criterio de ordenación por defecto
-    };
-
-    private async Task ClickScanner(MouseEventArgs args)
-    {
-        mHelpText = "";
-        searchString = string.Empty;
-        await searchStringField!.FocusAsync();
-        IsTextUpdateSuppression = !IsTextUpdateSuppression;        
-    }
-    private async Task OnSearchClicK(MouseEventArgs args)
-    {
-        if (searchString.Trim().Length > 3)
+        catch (Exception ex)
         {
-            IsTextUpdateSuppression = false;
-            mHelpText = "Espere por favor...";
-            await PackingListMudDataGrid!.ReloadServerData();
-            await searchStringField!.FocusAsync();
+            mHelpText = $"Error: {ex.Message}";
+            searchResults.Clear();
         }
 
+        _loading = false;
+        IsTextUpdateSuppression = true;
+        StateHasChanged();
     }
+
     private async Task OnClearClick(MouseEventArgs args)
     {
         mHelpText = "";
         searchString = string.Empty;
+        showInitialData = true;
+        isSearching = false;
+        searchTriggered = false;
+        searchResults.Clear();
+        StateHasChanged();
         await Task.CompletedTask;
     }
-    private async Task CodeFieldOnKeyUp(KeyboardEventArgs args)
+
+    private async Task CodeFieldOnKeyDown(KeyboardEventArgs args)
     {
-        if (args.Key == "Enter" && searchString.Length >= 3)
+        if (args.Key == "Enter")
         {
-            IsTextUpdateSuppression = false;
-            mHelpText = "Espere por favor...";
-            await PackingListMudDataGrid!.ReloadServerData();
+            if (searchTriggered) return;
+            searchTriggered = true;
+            try
+            {
+                await ExecuteSearch();
+            }
+            finally
+            {
+                await Task.Delay(300);
+                searchTriggered = false;
+            }
         }
+        else if (args.Key == "Escape")
+        {
+            searchString = string.Empty;
+            showInitialData = true;
+            isSearching = false;
+            searchTriggered = false;
+            searchResults.Clear();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadInitialPackingList()
+    {
+        await AuthenticationStateProvider.RefresMobileStaticVariables();
+        _loadingInitial = true;
+        showInitialData = true;
+        isSearching = false;
+        searchTriggered = false;
+
+        try
+        {
+            HttpResponseMessage response = await Http.GetAsync($"api/Packing/GetPackingList?supplierId={Session.SupplierId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadFromJsonAsync<WebApiResponse<List<Models.PackageList>>>();
+                initialData = content?.data ?? new List<Models.PackageList>();
+
+                // Agrupar datos iniciales por concesionario
+                GroupData(initialData);
+            }
+            else
+            {
+                CustomerName = "Error cargando datos";
+                PackingCode = "";
+            }
+        }
+        catch (Exception)
+        {
+            CustomerName = "Error de conexión";
+            PackingCode = "";
+        }
+
+        _loadingInitial = false;
+        StateHasChanged();
     }
 }
