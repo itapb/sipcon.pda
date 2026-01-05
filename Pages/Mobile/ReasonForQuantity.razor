@@ -16,7 +16,7 @@
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="12">
-                        <MudSelect T="PartialType" Label="MOTVIO" ToStringFunc="@ConvertPartialTypeFunc" ValueChanged="OnPartialTypeValueChanged" Value="PartialTypeSelected" Class="d-flex align-center justify-center" Required="true" RequiredError="Campo requerido">
+                        <MudSelect T="PartialType" Label="MOTIVO" ToStringFunc="@ConvertPartialTypeFunc" ValueChanged="OnPartialTypeValueChanged" Value="PartialTypeSelected" Class="d-flex align-center justify-center" Required="true" RequiredError="Campo requerido">
                             @foreach (var partialtype in PartialTypes!)
                             {
                                 <MudSelectItem Value="partialtype" />

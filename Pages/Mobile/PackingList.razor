@@ -32,6 +32,24 @@
                         </Columns>                        
                     </MudDataGrid>
                 </MudText>
+                    </MudPaper>
+                }
+                    </MudPaper>
+                }
+                    </MudPaper>
+                }
+                    </MudPaper>
+                }
+                    </MudPaper>
+                }
+                    </MudPaper>
+                }
+                <MudTextField T="string" Margin="Margin.Dense" OnAdornmentClick="OnSearchClicK" Clearable="true" TextUpdateSuppression="@IsTextUpdateSuppression" OnKeyUp="CodeFieldOnKeyUp" @bind-Value="searchString" OnClearButtonClick="OnClearClick" Placeholder="Buscar" @ref="searchStringField" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" HelperText="@mHelpText" Variant="Variant.Filled" HelperId="custom-helper-text" />
+                @* <MudTextField T="string" Margin="Margin.Dense"  ValueChanged="@(s => OnSearch(s))" Value="searchString" Placeholder=" Buscar" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" HelperText="@mHelpText" Variant="Variant.Filled" HelperId="custom-helper-text" /> *@
+                    </MudPaper>
+                }
+                    </MudPaper>
+                }
             </MudItem>
             <MudItem xs="12">
                 <MudTextField T="string" Margin="Margin.Dense" OnAdornmentClick="OnSearchClicK" Clearable="true" TextUpdateSuppression="@IsTextUpdateSuppression" OnKeyUp="CodeFieldOnKeyUp" @bind-Value="searchString" OnClearButtonClick="OnClearClick" Placeholder="Buscar" @ref="searchStringField" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" HelperText="@mHelpText" Variant="Variant.Filled" HelperId="custom-helper-text" />
@@ -57,6 +75,11 @@
         font-size: 1rem;
         color: @(IsTextUpdateSuppression ? "red" : "blue");
         font-style: italic;
+    }
+    .scrollable-container {
+        max-height: 300px; 
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 </style>
 @code { [Inject] private UserSession Session { get; set; } = null!;
