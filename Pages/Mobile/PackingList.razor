@@ -58,11 +58,13 @@
                                                 <MudStack Row="true" Justify="Justify.SpaceBetween" Style="width: 100%;" Spacing="2">
                                                     <div style="flex: 3; text-align: left;">
                                                         <span style="font-weight: normal;">@context.Item.PartInnerCode</span>
+
                                                     </div>
                                                     <div style="flex: 5; text-align: left;">
                                                         <span style="margin-left: 15px;">@context.Item.PartName</span>
                                                     </div>
                                                     <div style="flex: 2; text-align: right;">
+
                                                         @context.Item.Quantity
                                                     </div>
                                                 </MudStack>
@@ -107,6 +109,7 @@
                                     }
                                 </MudExpansionPanels>
                             </div>
+
                         }
                         else
                         {
@@ -250,6 +253,7 @@
             StateHasChanged();
         }
     }
+
 
     private async Task PerformSearch(string searchTerm)
     {
