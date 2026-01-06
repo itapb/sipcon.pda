@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sipcon.Mobile.WebApp</title>
-    <base href="/" />
+    <base href="/sipconpda/" />
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
@@ -35,7 +35,79 @@
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js?v=1"></script>
-    <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
+    <script>
+
+        (function () {
+
+            try {
+
+                if (typeof window === 'undefined' || typeof navigator === 'undefined')
+
+                    return;
+
+                // Only register on top-level window (not in an iframe), and only if browser supports SW
+
+                if (window.self !== window.top) {
+
+                    console.debug('Skipping service worker registration: running in an iframe.');
+
+                    return;
+
+                }
+
+                if (!('serviceWorker' in navigator)) {
+
+                    console.debug('Service Worker API not available in this browser / context.');
+
+                    return;
+
+                }
+
+                // Use the resolved absolute href property (not getAttribute) so new URL() receives an absolute base.
+
+                const baseElement = document.querySelector('base');
+
+                const baseHref = baseElement?.href ?? (location.origin + '/');
+
+                // Use the actual published service worker filename if your publish process emits a different name.
+
+                const swFileName = 'service-worker.js'; // or 'service-worker.published.js' if that's what you publish
+
+                const swUrl = new URL(swFileName, baseHref).toString();
+
+                // Optional: verify that the SW file exists before attempting registration (avoids some 404 logs)
+
+                fetch(swUrl, { method: 'HEAD' })
+
+                    .then(resp => {
+
+                        if (!resp.ok) {
+
+                            console.warn(`Service worker script not found at ${swUrl} (status: ${resp.status}). Skipping registration.`);
+
+                            return;
+
+                        }
+
+                        return navigator.serviceWorker.register(swUrl, { updateViaCache: 'none' })
+
+                            .then(reg => console.log('Service worker registered:', reg.scope))
+
+                            .catch(err => console.warn('Service worker registration failed:', err));
+
+                    })
+
+                    .catch(err => console.warn('Failed to verify service-worker before register:', err));
+
+            } catch (err) {
+
+                console.warn('Service worker registration error:', err);
+
+            }
+
+        })();
+    </script>
+
 </body>
 
 </html>
