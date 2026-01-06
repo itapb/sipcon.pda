@@ -41,7 +41,6 @@
                     <MudPaper Elevation="1" Class="pa-2 mb-3">
                         @if (searchResults.Any())
                         {
-                            <MudText Typo="Typo.h6" Class="mb-3">Resultados de búsqueda</MudText>
                             <!-- DataGrid para búsqueda -->
                             <MudDataGrid T="Models.PackageList"
                                          Items="@searchResults"
@@ -59,12 +58,11 @@
                                                 <MudStack Row="true" Justify="Justify.SpaceBetween" Style="width: 100%;" Spacing="2">
                                                     <div style="flex: 3; text-align: left;">
                                                         <span style="font-weight: normal;">@context.Item.PartInnerCode</span>
+                                                    </div>
+                                                    <div style="flex: 5; text-align: left;">
                                                         <span style="margin-left: 15px;">@context.Item.PartName</span>
                                                     </div>
-                                                    <div style="flex: 2; text-align: left;">
-                                                        @context.Item.CustomerName
-                                                    </div>
-                                                    <div style="flex: 1; text-align: right;">
+                                                    <div style="flex: 2; text-align: right;">
                                                         @context.Item.Quantity
                                                     </div>
                                                 </MudStack>
@@ -84,29 +82,31 @@
                     <MudPaper Elevation="1" Class="pa-2 mb-3">
                         @if (groupedInitialData.Any())
                         {
-                            <MudExpansionPanels MultiExpansion="false">
-                                @foreach (var dealerGroup in groupedInitialData)
-                                {
-                                    var itemCount = dealerGroup.Count();
-                                    var totalQuantity = dealerGroup.Sum(x => x.Quantity ?? 0);
+                            <div class="scrollable-container">
+                                <MudExpansionPanels MultiExpansion="false">
+                                    @foreach (var dealerGroup in groupedInitialData)
+                                    {
+                                        var itemCount = dealerGroup.Count();
+                                        var totalQuantity = dealerGroup.Sum(x => x.Quantity ?? 0);
 
-                                    <MudExpansionPanel Text="@($"{dealerGroup.Key} - {itemCount} items")"
-                                                       @key="@dealerGroup.Key">
-                                        <ChildContent>
-                                            <MudTable Items="@dealerGroup" Dense="true" Hover="true" Striped="true">
-                                                <HeaderContent>
-                                                    <MudTh>Descripción</MudTh>
-                                                    <MudTh Style="text-align: right;">Cantidad</MudTh>
-                                                </HeaderContent>
-                                                <RowTemplate>
-                                                    <MudTd DataLabel="Descripción">@context.PartName</MudTd>
-                                                    <MudTd DataLabel="Cantidad" Style="text-align: right;">@context.Quantity</MudTd>
-                                                </RowTemplate>
-                                            </MudTable>
-                                        </ChildContent>
-                                    </MudExpansionPanel>
-                                }
-                            </MudExpansionPanels>
+                                        <MudExpansionPanel Text="@($"{dealerGroup.Key} - {itemCount} items")"
+                                                           @key="@dealerGroup.Key">
+                                            <ChildContent>
+                                                <MudTable Items="@dealerGroup" Dense="true" Hover="true" Striped="true">
+                                                    <HeaderContent>
+                                                        <MudTh>Descripción</MudTh>
+                                                        <MudTh Style="text-align: right;">Cantidad</MudTh>
+                                                    </HeaderContent>
+                                                    <RowTemplate>
+                                                        <MudTd DataLabel="Descripción">@context.PartName</MudTd>
+                                                        <MudTd DataLabel="Cantidad" Style="text-align: right;">@context.Quantity</MudTd>
+                                                    </RowTemplate>
+                                                </MudTable>
+                                            </ChildContent>
+                                        </MudExpansionPanel>
+                                    }
+                                </MudExpansionPanels>
+                            </div>
                         }
                         else
                         {
