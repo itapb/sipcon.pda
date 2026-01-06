@@ -5,7 +5,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sipcon.Mobile.WebApp</title>
-    <base href="/sipconpda/" />
+    <!--<base href="/sipconpda/" />-->
+    <script>
+        // Simulamos la lógica de "Environment" detectando la URL
+        var isLocal = window.location.hostname === 'localhost';
+        var baseHref = isLocal ? '/' : '/sipconpda/';
+
+        var baseTag = document.createElement('base');
+        baseTag.href = baseHref;
+        document.head.appendChild(baseTag);
+
+        console.log("Environment Base Href set to: " + baseHref);
+    </script>
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
