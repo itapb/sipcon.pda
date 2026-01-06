@@ -138,6 +138,12 @@
         color: @(IsTextUpdateSuppression ? "red" : "blue");
         font-style: italic;
     }
+
+    .scrollable-container {
+        max-height: 300px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
 </style>
 
 @code {
