@@ -11,19 +11,33 @@
                 </MudStack>
             </MudItem>
             <MudItem xs="12">
-                <MudText>
-                    <MudDataGrid @ref="ContactsCatalogMudDataGrid" T="Customer" ServerData="ServerReload" Striped="true" Hover="true" Filterable="false" Loading="_loading" FixedHeader SelectedItemChanged="ClickSelectContact" @bind-CurrentPage="ContactCurrentPage" ShowColumnOptions="false" Class="hide-datagrid-headers">
-                        <Columns>
-                            <PropertyColumn Property="x => x.Name" Title="" CellClass="d-flex justify-center align-center" />
-                        </Columns>
-                    </MudDataGrid>
-                </MudText>
+                <div class="scrollable-container">
+                    <MudText>
+                        <MudDataGrid @ref="ContactsCatalogMudDataGrid" 
+                                    T="Customer" 
+                                    ServerData="ServerReload" 
+                                    Striped="true" 
+                                    Hover="true" 
+                                    Filterable="false" 
+                                    Loading="_loading" 
+                                    FixedHeader="true" 
+                                    SelectedItemChanged="ClickSelectContact" 
+                                    @bind-CurrentPage="ContactCurrentPage" 
+                                    ShowColumnOptions="false" 
+                                    Class="hide-datagrid-headers"
+                                    Height="auto">
+                            <Columns>
+                                <PropertyColumn Property="x => x.Name" Title="" CellClass="d-flex justify-center align-center" />
+                            </Columns>
+                        </MudDataGrid>
+                    </MudText>
+                </div>
             </MudItem>
             <MudItem xs="12">
                 <MudStack Row="true" Justify="Justify.Center">
                     <MudStack Row="true" Spacing="5">
                         <MudFab Color="Color.Info" StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Medium" OnClick="ClickRefreshContactsCatalog" />
-                        <MudFab Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Close" Size="Size.Medium" Href="process-list" />
+                        <MudFab Color="Color.Error" StartIcon="@Icons.Material.Filled.Close" Size="Size.Medium" Href="process-list" />
                     </MudStack>
                 </MudStack>
             </MudItem>
@@ -33,6 +47,11 @@
 <style>
     .hide-datagrid-headers .mud-table-head {
         display: none !important;
+    }   
+    .scrollable-container {
+        max-height: 60vh;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 </style>
 @code { [Inject] private UserSession Session { get; set; } = null!;

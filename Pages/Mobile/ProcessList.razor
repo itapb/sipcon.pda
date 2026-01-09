@@ -13,26 +13,27 @@
             </MudSelect>
             @if (_ModuleNames.Contains("INVENTARIO-MOVIL-RECEPCION"))
             {
-                <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Info" EndIcon="@Icons.Material.Filled.AddBusiness" Href="mobile-reception" Disabled="@(UserTypeSelected is null)">Recepcion</MudButton>
+                <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Style="background-color: #757575;color: white;" EndIcon="@Icons.Material.Filled.AddBusiness" Href="mobile-reception" Disabled="@(UserTypeSelected is null)">Recepcion</MudButton>
+            
             }
             @if (_ModuleNames.Contains("INVENTARIO-MOVIL-TRASLADO"))
             {
-            <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Info" EndIcon="@Icons.Material.Filled.MoveDown" Href="mobile-transfer" Disabled="@(UserTypeSelected is null)">Traslado</MudButton>
+                <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Style="background-color: #616161;  color: white;" EndIcon="@Icons.Material.Filled.MoveDown" Href="mobile-transfer" Disabled="@(UserTypeSelected is null)">Traslado</MudButton>
             }
             @if (_ModuleNames.Contains("INVENTARIO-MOVIL-RECOLECCION")) 
             {
-            <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Info" EndIcon="@Icons.Material.Filled.ShoppingCartCheckout" Href="mobile-collection" Disabled="@(UserTypeSelected is null)">Recoleccion</MudButton>
+                <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Info" Style="background-color: var(--mud-palette-info-lighten);" EndIcon="@Icons.Material.Filled.ShoppingCartCheckout" Href="mobile-collection" Disabled="@(UserTypeSelected is null)">Recoleccion</MudButton>
             }
             @if (_ModuleNames.Contains("INVENTARIO-MOVIL-EMBALAJE"))
             {
-            <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Info" EndIcon="@Icons.Material.Filled.MoveToInbox" Href="mobile-packing" Disabled="@(UserTypeSelected is null)">Embalaje</MudButton>
+                <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Info" Style="background-color: var(--mud-palette-info-darken);" EndIcon="@Icons.Material.Filled.MoveToInbox" Href="mobile-packing" Disabled="@(UserTypeSelected is null)">Embalaje</MudButton>
             }
             @if (_ModuleNames.Contains("INVENTARIO-MOVIL-DESPACHO")) 
             {
-             <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Info" EndIcon="@Icons.Material.Filled.LocalShipping" Href="mobile-dispatch" Disabled="@(UserTypeSelected is null)">Despacho</MudButton>
+                <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Warning" Style="background-color: var(--mud-palette-warning-lighten);" EndIcon="@Icons.Material.Filled.LocalShipping" Href="mobile-dispatch" Disabled="@(UserTypeSelected is null)">Despacho</MudButton>
             }
             
-            <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Info" EndIcon="@Icons.Material.Filled.ManageSearch" Href="mobile-packinglist" Disabled="@(UserTypeSelected is null)">Packing List</MudButton>
+            <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Warning" Style="background-color: var(--mud-palette-warning-darken);" EndIcon="@Icons.Material.Filled.ManageSearch" Href="mobile-packinglist" Disabled="@(UserTypeSelected is null)">Packing List</MudButton>
             
         </MudStack>
     </MudPaper>
