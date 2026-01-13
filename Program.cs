@@ -6,11 +6,15 @@ using Sipcon.Mobile.WebApp;
 using Sipcon.Mobile.WebApp.Helper;
 using Sipcon.Mobile.WebApp.Repository.Auth;
 using Sipcon.Mobile.WebApp.Services;
+using System.Globalization;
 
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
+
+CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 
 var backEndUrl = "";
 var env = builder.Configuration.GetValue<string>("Environment")!;
