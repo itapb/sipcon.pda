@@ -1,0 +1,139 @@
+﻿@using Sipcon.Mobile.WebApp.Layout
+@layout MobileLayout
+
+<div style="flex-shrink: 0;" class="pa-3 jpv1-dialog-body-background">
+    <MudPaper Elevation="2" Class="pa-2">
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudStack Row="false" Class="pa-2 mud-theme-info mud-typography-h6" Spacing="1" style="line-height:1.1;">
+                    <div>CLONAR BULTO</div>
+                    <MudStack Row="true" StretchItems="StretchItems.Start" Justify="Justify.FlexEnd">
+                        <div>CÓDIGO: @CurrentPackage?.Code</div>
+                    </MudStack>
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudNumericField HideSpinButtons="true"
+                                 T="int"
+                                 Label="Cantidad de copias"
+                                 @bind-Value="ReplicationCount"
+                                 Immediate="true"
+                                 Min="1"
+                                 Max="999"
+                                 Variant="Variant.Outlined"
+                                 Class="d-flex align-center justify-center">
+                </MudNumericField>
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Error" Class="mt-2">@ErrorMessage</MudText>
+                }
+            </MudItem>
+            <MudItem xs="12">
+                <MudStack Row="true" Justify="Justify.Center">
+                    <MudStack Row="true" Spacing="5">
+                        <MudFab Color="Color.Success" StartIcon="@Icons.Material.Filled.Check" Size="Size.Medium" OnClick="ClickConfirmClone" Disabled="ReplicationCount < 1 || IsProcessing" />
+                        <MudFab Color="Color.Error" StartIcon="@Icons.Material.Filled.Close" Size="Size.Medium" OnClick="ClickCancel" Disabled="IsProcessing" />
+                    </MudStack>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</div>
+
+@code {
+    [Inject] private UserSession Session { get; set; } = null!;
+    [Inject] private HttpClient Http { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public Models.Package? CurrentPackage { get; set; }
+    [Parameter] public Models.Packing? currentPacking { get; set; }
+
+    private int ReplicationCount { get; set; } = 1;
+    private bool IsProcessing { get; set; } = false;
+    private string ErrorMessage { get; set; } = string.Empty;
+
+    private async Task ClickConfirmClone(MouseEventArgs args)
+    {
+        if (ReplicationCount < 1)
+        {
+            ErrorMessage = "La cantidad debe ser mayor a 0";
+            return;
+        }
+
+        IsProcessing = true;
+
+        try
+        {
+            // Validar que el bulto esté cerrado
+            if (CurrentPackage?.Closed != true)
+            {
+                await DialogService.ShowDialog(
+                    "El bulto debe estar CERRADO para poder clonarse.",
+                    "Clonar bulto",
+                    "OK",
+                    Color.Info,
+                    Icons.Material.Filled.Lock);
+                return;
+            }
+
+            // Ejecutar la clonación
+            var response = await Http.PostAsync(
+                $"api/Packing/ClonePackage?packageId={CurrentPackage?.Id}&replicationCount={ReplicationCount}",
+                null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Mostrar confirmación de éxito
+                var result = await DialogService.ShowDialog(
+                    $"Se clonaron {ReplicationCount} copia(s) del bulto {CurrentPackage?.Code}",
+                    "Clonación exitosa",
+                    "OK",
+                    Color.Success,
+                    Icons.Material.Filled.CheckCircle);
+
+                if (!result!.Canceled)
+                {
+                    MudDialog?.Close(DialogResult.Ok(ReplicationCount));
+                }
+            }
+            else
+            {
+                try
+                {
+                    var errorApi = await response.Content.ReadFromJsonAsync<WebApiResponse<object>>();
+                    var message = errorApi?.message ?? "Error al clonar el bulto.";
+
+                    await DialogService.ShowDialog(
+                        message,
+                        "Error al Clonar",
+                        "OK",
+                        Color.Error,
+                        Icons.Material.Filled.Error);
+                }
+                catch
+                {
+                    var raw = await response.Content.ReadAsStringAsync();
+
+                    await DialogService.ShowDialog(
+                        raw,
+                        "Error al Clonar",
+                        "OK",
+                        Color.Error,
+                        Icons.Material.Filled.Error);
+                }
+            }
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    private async Task ClickCancel(MouseEventArgs args)
+    {
+        MudDialog?.Cancel();
+        await Task.CompletedTask;
+    }
+}

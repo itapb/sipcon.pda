@@ -6,10 +6,18 @@
     <MudPaper Elevation="2" Class="pa-3">
         <MudGrid Spacing="2">
             <MudItem xs="12">
-                <MudStack Row="false" Class="pa-2 mud-theme-info mud-typography-h6" Spacing="1" style="line-height:1.1;">
-                    <div>CLIENTE : @currentDispatch?.CustomerName</div>
-                    <MudStack Row="true" StretchItems="StretchItems.Start" Justify="Justify.FlexEnd">
-                        <div>GUIA: @currentDispatch?.GuideId</div>                  
+                <MudStack Row="false"
+                          Class="pa-2 mud-theme-info"
+                          Spacing="1"
+                          AlignItems="AlignItems.Start"
+                          style="line-height:1.1; text-align:left; font-size:14px;">
+                    <div><strong>CLIENTE:</strong> @currentDispatch?.CustomerName</div>
+                    <MudStack Row="false"
+                              Spacing="1"
+                              AlignItems="AlignItems.Start">
+                        <div><strong>GUIA:</strong> @currentDispatch?.GuideId</div>
+                        <div><strong>Bultos:</strong> @totalBultos</div>
+                        <div><strong>Peso:</strong> @pesoTotal.ToString("N2") kg</div>
                     </MudStack>
                 </MudStack>
             </MudItem>
@@ -80,6 +88,8 @@
     bool _loading = true;
     string searchString = "";
     private int PackageCurrentPage = 0;
+    private int totalBultos = 0;
+    private double pesoTotal = 0;
     bool IsTextUpdateSuppression = true;
     string mHelpText = "";
 
@@ -102,23 +112,40 @@
         var totalItems = 0;
         var mOffset = state.Page * state.PageSize;
         IEnumerable<Models.GuideDetails> data = new List<Models.GuideDetails>();
+
         HttpResponseMessage response = await Http.GetAsync($"api/Packing/GetPackagesFromGuide?guideId={currentDispatch?.GuideId}");
+
         if (response.IsSuccessStatusCode)
         {
             var content2 = await response.Content.ReadFromJsonAsync<WebApiResponse<List<Models.GuideDetails>>>();
             totalItems = content2!.total ?? 0;
             data = content2!.data ?? new List<Models.GuideDetails>();
+
+            // CALCULAR TOTALES AQUÍ
+            totalBultos = data.Count();
+
+            // Sumar todos los pesos (Weight puede ser null, así que usamos ?? 0)
+            pesoTotal = data.Sum(b => b.Weight ?? 0);
+
+            // Si necesitas redondear a 2 decimales:
+            pesoTotal = Math.Round(pesoTotal, 2);
         }
         else
         {
             var errorMessage = await response.Content.ReadAsStringAsync();
             await DialogService.ShowDialog(errorMessage!, "Error", "OK", Color.Error, Icons.Material.Filled.Error);
         }
+
         if (state.SortDefinitions.FirstOrDefault() is SortDefinition<Models.GuideDetails> sortDefinition)
         {
             data = data.OrderByDirection(sortDefinition.Descending ? SortDirection.Descending : SortDirection.Ascending, GetSortKeySelector(sortDefinition.SortBy));
         }
+
         _loading = false;
+
+        // Asegurar que la UI se actualice
+        StateHasChanged();
+
         return new GridData<Models.GuideDetails> { TotalItems = totalItems, Items = data };
 
     }
@@ -143,31 +170,34 @@
         var result_NewPackage = await AddPackage(InputCode, currentDispatch?.GuideId, currentDispatch?.UserId);
         if (result_NewPackage!.IsSuccessStatusCode)
         {
-            //var result = await DialogService.ShowDialog(Useful.OkSavedMessage, "Bulto en Guia", "OK", Color.Info, Icons.Material.Filled.Commit);     
+            //var result = await DialogService.ShowDialog(Useful.OkSavedMessage, "Bulto en Guia", "OK", Color.Info, Icons.Material.Filled.Commit);
             mHelpText = "";
             await GuideDetailslMudDataGrid!.ReloadServerData();
+            // El método ReloadServerData() ya recalculará totalBultos y pesoTotal automáticamente
         }
-        else if (result_NewPackage.StatusCode == System.Net.HttpStatusCode.Conflict)        {
+        else if (result_NewPackage.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
             var conflictContent = await result_NewPackage.Content.ReadFromJsonAsync<WebApiResponse<Object?>>();
             mHelpText = $"{conflictContent?.message!.Replace("USP_POST_GUIDE_ADDPACKGE : ", "")} {searchString.ToUpper()}";
             //await DialogService.ShowDialog(conflictContent?.message!.Replace("USP_POST_GUIDE_ADDPACKGE : ", ""), "Error", "OK", Color.Error, Icons.Material.Filled.Error);
-            
+        
         }
         searchString = "";
-        StateHasChanged();
+        StateHasChanged(); // Esto actualizará la UI con los nuevos valores de totalBultos y pesoTotal
         IsTextUpdateSuppression = true;
-
+   
     }
     private async Task<HttpResponseMessage?> AddPackage(string? Code, int? GuideId, int? UserId) => await Http.PostAsync($"api/Packing/AddPackge?packageCode={Code}&guideId={GuideId}&userId={UserId}", null);
     private async Task ClickDeletePackage(Models.GuideDetails item)
     {
         var result_Post_Zone = await Http.PostAsync($"api/Packing/DeletePackge?packageCode={item.Code}&guideId={currentDispatch?.GuideId}&userId={currentDispatch?.UserId}", null);
+
         if (result_Post_Zone.IsSuccessStatusCode)
         {
             var result = await DialogService.ShowDialog("Removido!", "Bulto", "OK", Color.Info, Icons.Material.Filled.Commit);
             if (!result!.Canceled)
             {
-                await GuideDetailslMudDataGrid!.ReloadServerData();
+                await GuideDetailslMudDataGrid!.ReloadServerData(); // Esto recalculará automáticamente
             }
 
         }
