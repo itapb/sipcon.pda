@@ -9,7 +9,7 @@
                 <MudStack Row="false" Class="pa-2 mud-theme-info mud-typography-h6" Spacing="1" style="line-height:1.1;">
                     <div>CLIENTE : @currentPacking?.CustomerName</div>
                     <MudStack Row="true" StretchItems="StretchItems.Start" Justify="Justify.FlexEnd">
-                        <div>BULTOS</div>                      
+                        <div>BULTOS</div>
                     </MudStack>
                 </MudStack>
             </MudItem>
@@ -20,9 +20,18 @@
                             <TemplateColumn CellClass="d-flex justify-center align-center">
                                 <CellTemplate>
                                     <MudStack Row>
-                                        <MudText Class="mr-2" Color="@((context.Item.Closed ?? false) ? Color.Success : Color.Inherit)">@context.Item.Code</MudText>
-                                        <MudText Class="mr-2" Color="@((context.Item.Closed ?? false) ? Color.Success : Color.Inherit)">@context.Item.Weight Kg</MudText>
-                                        <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Print" OnClick="() => ClickPrintPackage(context.Item)" Disabled="@(!(context.Item.Closed ?? false))"></MudIconButton>
+                                    <MudText Class="mr-2" Color="@((context.Item.Closed ?? false) ? Color.Success : Color.Inherit)"> @context.Item.Code</MudText>
+                                    <MudText Class="mr-2" Color="@((context.Item.Closed ?? false) ? Color.Success : Color.Inherit)"> @context.Item.Weight Kg</MudText>
+                                     <MudMenu>
+                                      <ActivatorContent>
+                                                <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Filled.EditNote"></MudIconButton>
+                                      </ActivatorContent>
+                                      <ChildContent>
+                                          <MudMenuItem Icon="@Icons.Material.Outlined.Print" OnClick="@(() => ClickPrintPackage(context.Item))" Disabled="@(!(context.Item.Closed ?? false))">Imprimir</MudMenuItem>
+                                          <MudMenuItem Icon="@Icons.Material.Outlined.LockOpen" OnClick="@(() => clickOpenPackage(context.Item))" Disabled="@(context.Item.Closed == false)">Abrir</MudMenuItem>
+                                          <MudMenuItem Icon="@Icons.Material.Outlined.AddToPhotos" OnClick="@(() => clickClonePackage(context.Item))" Disabled="@(context.Item.Closed == false)">Clonar</MudMenuItem>
+                                      </ChildContent>
+                                     </MudMenu>
                                     </MudStack>
                                 </CellTemplate>
                             </TemplateColumn>
@@ -30,9 +39,9 @@
                     </MudDataGrid>
                 </MudText>
             </MudItem>
-             <MudItem xs="12">
+            <MudItem xs="12">
                 <MudTextField T="string" Placeholder="Buscar" HelperId="custom-helper-text" HelperText="@mHelpText" Adornment="Adornment.Start" OnAdornmentClick="OnSearchClicK" Clearable="true" TextUpdateSuppression="@IsTextUpdateSuppression" OnKeyUp="CodeFieldOnKeyUp" @bind-Value="searchString" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Style="height:40px;" />
-             </MudItem>
+            </MudItem>
             <MudItem xs="12">
                 <MudStack Row="true" Justify="Justify.Center">
                     <MudStack Row="true" Spacing="3">
@@ -57,14 +66,16 @@
         font-style: italic;
     }
 </style>
-@code { [Inject] private UserSession Session { get; set; } = null!;
-    [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!;
-    [Inject] private HttpClient Http { get; set; } = default!;
-    [Inject] private IDialogService DialogService { get; set; } = default!;
-    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public Models.Packing? currentPacking { get; set; } = default!;
-    [Parameter] public Models.PackingStep Value { get; set; }
-    [Parameter] public EventCallback<Models.PackingStep> ValueChanged { get; set; }
+@code {
+        [Inject] private IJSRuntime JS { get; set; } = default!;
+        [Inject] private UserSession Session { get; set; } = null!;
+        [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!;
+        [Inject] private HttpClient Http { get; set; } = default!;
+        [Inject] private IDialogService DialogService { get; set; } = default!;
+        [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+        [Parameter] public Models.Packing? currentPacking { get; set; } = default!;
+        [Parameter] public Models.PackingStep Value { get; set; }
+        [Parameter] public EventCallback<Models.PackingStep> ValueChanged { get; set; }
     private Models.PackingStep CurrentStep
     {
         get => Value;
@@ -100,14 +111,14 @@
         currentPacking!.SupplierId = Session.SupplierId;
 
         _loading = true;
-        var totalItems = 0;        
+        var totalItems = 0;
         var mOffset = state.Page * state.PageSize;
-        IEnumerable<Models.Package> data = new List<Models.Package>();        
+        IEnumerable<Models.Package> data = new List<Models.Package>();
         HttpResponseMessage response = await Http.GetAsync($"api/Packing/GetPackages?supplierId={currentPacking?.SupplierId}&customerId={currentPacking?.CustomerId}&userId={currentPacking?.UserId}");
         if (response.IsSuccessStatusCode)
         {
             if (await response.Content.ReadFromJsonAsync<WebApiResponse<List<Models.Package>>>() is WebApiResponse<List<Models.Package>> content2 && content2?.data is List<Models.Package> datalist)
-            {            
+            {
                 if (!String.IsNullOrEmpty(searchString) && datalist.Where(r => (r.Code != null && r.Code!.Contains(searchString.Trim(), StringComparison.OrdinalIgnoreCase))).FirstOrDefault() is Models.Package PackageItem)
                 {
                     await ClickSelectPackage(PackageItem);
@@ -119,9 +130,9 @@
             }
         }
         else
-        {           
+        {
             var errorMessage = await response.Content.ReadAsStringAsync();
-            await DialogService.ShowDialog(errorMessage!, "Error", "OK", Color.Error, Icons.Material.Filled.Error);          
+            await DialogService.ShowDialog(errorMessage!, "Error", "OK", Color.Error, Icons.Material.Filled.Error);
         }
 
         mHelpText = !String.IsNullOrEmpty(searchString) ? $"No se encontro {searchString.TrimEnd()}" : "";
@@ -188,7 +199,7 @@
     private async Task<bool> IsValidAnyPackages()
     {
         string msgresult = "";
-        if (PackagesMudDataGrid!.FilteredItems.Count(r => r.Closed == true) == 0) msgresult = "No hay algun bulto cerrado!";        
+        if (PackagesMudDataGrid!.FilteredItems.Count(r => r.Closed == true) == 0) msgresult = "No hay algun bulto cerrado!";
         if (msgresult.Length > 0) await DialogService.ShowDialog(msgresult, "Error GUIA", "OK", Color.Error, Icons.Material.Filled.Error);
 
         return (msgresult.Length == 0);
@@ -202,11 +213,11 @@
         {
             var RequestPrintContent = await result_RequestPrint.Content.ReadFromJsonAsync<WebApiResponse<PostResponse>>();
             await DialogService.ShowDialog($"Solicitud de Impresion :{RequestPrintContent?.data?.insertedRows}", "Bulto", "OK", Color.Info, Icons.Material.Filled.Commit);
-        } 
+        }
         else if (result_RequestPrint.StatusCode == System.Net.HttpStatusCode.Conflict)
         {
             var RequestPrintContent = await result_RequestPrint.Content.ReadFromJsonAsync<WebApiResponse<Object?>>();
-            await DialogService.ShowDialog(RequestPrintContent?.message ,"Error", "OK", Color.Info, Icons.Material.Filled.Commit);
+            await DialogService.ShowDialog(RequestPrintContent?.message, "Error", "OK", Color.Info, Icons.Material.Filled.Commit);
             //mHelpText = RequestPrintContent?.message ?? "";
         }
         await Task.CompletedTask;
@@ -232,4 +243,57 @@
             await SearchPackages();
         }
     }
+    private async Task clickOpenPackage(Models.Package? item)
+    {
+        var result_OpenPackage = await Http.PostAsync($"api/Packing/OpenPackage?packageId={item!.Id}&supplierId={currentPacking?.SupplierId}&customerId={currentPacking?.CustomerId}", null);
+        if (result_OpenPackage.IsSuccessStatusCode)
+        {
+            var result = await DialogService.ShowDialog(Useful.OkSavedMessage, "Abrir Bulto", "OK", Color.Info, Icons.Material.Filled.Commit);
+            if (!result!.Canceled)
+            {
+                await PackagesMudDataGrid!.ReloadServerData();
+            }
+        }
+    }
+
+private bool _cloningInProgress = false;
+
+private async Task clickClonePackage(Models.Package? item)
+{
+    if (_cloningInProgress || item is null) 
+        return;
+    
+    _cloningInProgress = true;
+    
+    try
+    {
+        DialogOptions options = new DialogOptions 
+        { 
+            MaxWidth = MaxWidth.Medium, 
+            BackdropClick = false, 
+            NoHeader = true 
+        };
+        
+        // Crear parámetros para el diálogo
+        var parameters = new DialogParameters
+        {
+            ["CurrentPackage"] = item,
+            ["currentPacking"] = currentPacking
+        };
+        
+        // Mostrar el diálogo
+            var dialogReference = await DialogService.ShowAsync<PackingPackageClone>("", parameters, options);
+            var result = await dialogReference.Result;
+        
+        // Si el diálogo se cerró con éxito, recargar la lista
+        if (!result.Canceled && result.Data is int replicationCount && replicationCount > 0)
+        {
+            await PackagesMudDataGrid!.ReloadServerData();
+        }
+    }
+    finally
+    {
+        _cloningInProgress = false;
+    }
 }
+}   
