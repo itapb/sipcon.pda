@@ -7,13 +7,26 @@
     <MudPaper Elevation="2" Class="pa-3">
         <MudGrid Spacing="2">
             <MudItem xs="12">
-                <MudStack Row="false" Class="pa-2 mud-theme-info mud-typography-h6" Spacing="1" style="line-height:1.1;">
-                    <div>CLIENTE : @CustomerName</div>
-                    <MudStack Row="true" StretchItems="StretchItems.Start" Justify="Justify.FlexEnd">
+                <MudStack Row="true" StretchItems="StretchItems.Start" Justify="Justify.SpaceBetween" Style="align-items: center;">
+                    <!-- Información del cliente y bulto -->
+                    <MudPaper Class="pa-2 mud-theme-info mud-typography-subtitle1">
+                        <div>CLIENTE : @CustomerName</div>
                         <div>BULTO: @PackingCode</div>
-                    </MudStack>
+                    </MudPaper>
                 </MudStack>
             </MudItem>
+            <!-- Switch para cambiar vista -->
+            <MudItem xs="12">
+                <MudStack Row="true" Justify="Justify.FlexStart">
+                    <MudPaper Class="pa-1">
+                        <MudSwitch @bind-Value="groupByDealer"
+                                   Color="Color.Primary"
+                                   Label="@GroupingText"
+                                   @bind-Value:after="AfterAsyncGrouping" />
+                    </MudPaper>
+                </MudStack>
+            </MudItem>
+            <!-- Campo de búsqueda -->
             <MudItem xs="12">
                 <MudTextField T="string"
                               Margin="Margin.Dense"
@@ -75,6 +88,7 @@
                     </MudPaper>
                 }
             </MudItem>
+
             <!-- Vista Inicial con Acordeón -->
             <MudItem xs="12">
                 @if (showInitialData)
@@ -84,33 +98,63 @@
                         {
                             <div class="scrollable-container">
                                 <MudExpansionPanels MultiExpansion="false">
-                                    @foreach (var dealerGroup in groupedInitialData)
+                                    @foreach (var group in groupedInitialData)
                                     {
-                                        var itemCount = dealerGroup.Count();
-                                        var totalQuantity = dealerGroup.Sum(x => x.Quantity ?? 0);
+                                        var itemCount = group.Count();
+                                        var totalQuantity = group.Sum(x => x.Quantity ?? 0);
 
-                                        <MudExpansionPanel Text="@($"{dealerGroup.Key} - {itemCount} items")"
-                                                           @key="@dealerGroup.Key">
-                                            <ChildContent>
-                                                <MudTable Items="@dealerGroup" Dense="true" Hover="true" Striped="true"
-                                                          FixedHeader="true" Height="400px" Style="table-layout: fixed; width: 100%; max-width: 1200px;">
-                                                    <HeaderContent>
-                                                        <MudTh Style="width: 75%;">Descripción</MudTh>
-                                                        <MudTh Style="text-align: center; width: 25%; background-color: #f5f5f5;">
-                                                            Cantidad
-                                                        </MudTh>
-                                                    </HeaderContent>
-                                                    <RowTemplate>
-                                                        <MudTd DataLabel="Descripción" Style="width: 75%;">
-                                                            <span style="font-size: 0.875rem;">@context.PartName</span>
-                                                        </MudTd>
-                                                        <MudTd DataLabel="Cantidad" Style="text-align: center; width: 25%; font-weight: bold; color: #333030;">
-                                                            @context.Quantity
-                                                        </MudTd>
-                                                    </RowTemplate>
-                                                </MudTable>
-                                            </ChildContent>
-                                        </MudExpansionPanel>
+                                        @if (groupByDealer)
+                                        {
+                                            <!-- Vista original: agrupado por concesionario -->
+                                            <MudExpansionPanel Text="@($"{group.Key} - {itemCount} items")"
+                                                               @key="@group.Key">
+                                                <ChildContent>
+                                                    <MudTable Items="@group" Dense="true" Hover="true" Striped="true"
+                                                              FixedHeader="true" Height="400px" Style="table-layout: fixed; width: 100%; max-width: 1200px;">
+                                                        <HeaderContent>
+                                                            <MudTh Style="width: 75%;">Descripción</MudTh>
+                                                            <MudTh Style="text-align: center; width: 25%; background-color: #f5f5f5;">
+                                                                Cantidad
+                                                            </MudTh>
+                                                        </HeaderContent>
+                                                        <RowTemplate>
+                                                            <MudTd DataLabel="Descripción" Style="width: 75%;">
+                                                                <span style="font-size: 0.875rem;">@context.PartName</span>
+                                                            </MudTd>
+                                                            <MudTd DataLabel="Cantidad" Style="text-align: center; width: 25%; font-weight: bold; color: #333030;">
+                                                                @context.Quantity
+                                                            </MudTd>
+                                                        </RowTemplate>
+                                                    </MudTable>
+                                                </ChildContent>
+                                            </MudExpansionPanel>
+                                        }
+                                        else
+                                        {
+                                            <!-- Vista invertida: agrupado por repuesto -->
+                                            <MudExpansionPanel Text="@($"{group.Key} - {itemCount} concesionario(s)")"
+                                                               @key="@group.Key">
+                                                <ChildContent>
+                                                    <MudTable Items="@group" Dense="true" Hover="true" Striped="true"
+                                                              FixedHeader="true" Height="400px" Style="table-layout: fixed; width: 100%; max-width: 1200px;">
+                                                        <HeaderContent>
+                                                            <MudTh Style="width: 75%;">Concesionario</MudTh>
+                                                            <MudTh Style="text-align: center; width: 25%; background-color: #f5f5f5;">
+                                                                Cantidad
+                                                            </MudTh>
+                                                        </HeaderContent>
+                                                        <RowTemplate>
+                                                            <MudTd DataLabel="Concesionario" Style="width: 75%;">
+                                                                <span style="font-size: 0.875rem;">@context.CustomerName</span>
+                                                            </MudTd>
+                                                            <MudTd DataLabel="Cantidad" Style="text-align: center; width: 25%; font-weight: bold; color: #333030;">
+                                                                @context.Quantity
+                                                            </MudTd>
+                                                        </RowTemplate>
+                                                    </MudTable>
+                                                </ChildContent>
+                                            </MudExpansionPanel>
+                                        }
                                     }
                                 </MudExpansionPanels>
                             </div>
@@ -122,6 +166,7 @@
                     </MudPaper>
                 }
             </MudItem>
+
             <MudItem xs="12">
                 <MudStack Row="true" Justify="Justify.Center">
                     <MudStack Row="true" Spacing="5">
@@ -139,6 +184,7 @@
         </MudGrid>
     </MudPaper>
 </div>
+
 <style>
     #custom-helper-text {
         font-size: 1rem;
@@ -175,29 +221,62 @@
     private string PackingCode = "";
     private string CustomerName = "";
     string mHelpText = "";
+    string GroupingText = "Concesionario";
 
     private List<Models.PackageList> initialData = new List<Models.PackageList>();
     private List<Models.PackageList> searchResults = new List<Models.PackageList>();
 
-    // Nuevas propiedades para agrupar datos por concesionario
+    // Variables para controlar el switch de agrupación
+    private bool groupByDealer = false;
+
+    // Nueva propiedad para agrupar datos
     private List<IGrouping<string, Models.PackageList>> groupedInitialData = new List<IGrouping<string, Models.PackageList>>();
 
-    private void GroupData(List<Models.PackageList> data)
+    // Método que se ejecuta después de cambiar el switch
+    private async Task AfterAsyncGrouping()
     {
-        if (data == null || !data.Any())
+        OnGroupingChanged();
+        RegroupData();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // Método para actualizar el texto del switch
+    private void OnGroupingChanged()
+    {
+        GroupingText = groupByDealer ? "Concesionario" : "Repuesto";
+    }
+
+    // Método para reagrupar cuando cambia el switch
+    private void RegroupData()
+    {
+        if (initialData == null || !initialData.Any())
         {
             groupedInitialData = new List<IGrouping<string, Models.PackageList>>();
             return;
         }
 
-        // Agrupar por CustomerName (concesionario)
-        var grouped = data
-            .Where(x => !string.IsNullOrWhiteSpace(x.CustomerName))
-            .GroupBy(x => (x.CustomerName ?? string.Empty).Trim())
-            .OrderBy(g => g.Key)
-            .ToList();
+        if (groupByDealer)
+        {
+            // Agrupar por CustomerName (concesionario)
+            var grouped = initialData
+                .Where(x => !string.IsNullOrWhiteSpace(x.CustomerName))
+                .GroupBy(x => (x.CustomerName ?? string.Empty).Trim())
+                .OrderBy(g => g.Key)
+                .ToList();
 
-        groupedInitialData = grouped;
+            groupedInitialData = grouped;
+        }
+        else
+        {
+            // Agrupar por PartName (repuesto)
+            var grouped = initialData
+                .Where(x => !string.IsNullOrWhiteSpace(x.PartName))
+                .GroupBy(x => (x.PartName ?? string.Empty).Trim())
+                .OrderBy(g => g.Key)
+                .ToList();
+
+            groupedInitialData = grouped;
+        }
     }
 
     private async Task ClickRefreshPackingPending(MouseEventArgs ev)
@@ -213,6 +292,9 @@
 
         await LoadInitialPackingList();
         await searchStringField!.FocusAsync();
+
+        // Asegurar que los datos se reagrupen según el modo actual
+        RegroupData();
     }
 
     private async Task OnSearchClicK(MouseEventArgs args)
@@ -311,6 +393,10 @@
         isSearching = false;
         searchTriggered = false;
         searchResults.Clear();
+
+        CustomerName = "";
+        PackingCode = "";
+
         StateHasChanged();
         await Task.CompletedTask;
     }
@@ -359,8 +445,9 @@
                 var content = await response.Content.ReadFromJsonAsync<WebApiResponse<List<Models.PackageList>>>();
                 initialData = content?.data ?? new List<Models.PackageList>();
 
-                // Agrupar datos iniciales por concesionario
-                GroupData(initialData);
+                // Agrupar datos iniciales según el modo actual
+                RegroupData();
+                OnGroupingChanged(); // Actualizar el texto del switch
             }
             else
             {
