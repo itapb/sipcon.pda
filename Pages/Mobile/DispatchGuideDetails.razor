@@ -10,14 +10,17 @@
                           Class="pa-2 mud-theme-info"
                           Spacing="1"
                           AlignItems="AlignItems.Start"
-                          style="line-height:1.1; text-align:left; font-size:14px;">
+                          style="line-height:1.3; text-align:left; font-size:18px;">
                     <div><strong>CLIENTE:</strong> @currentDispatch?.CustomerName</div>
-                    <MudStack Row="false"
-                              Spacing="1"
-                              AlignItems="AlignItems.Start">
+                    <MudStack Row="false" Spacing="1" AlignItems="AlignItems.Start">
                         <div><strong>GUIA:</strong> @currentDispatch?.GuideId</div>
-                        <div><strong>Bultos:</strong> @totalBultos</div>
-                        <div><strong>Peso:</strong> @pesoTotal.ToString("N2") kg</div>
+
+                        <MudStack Row="true"
+                                  Justify="Justify.SpaceBetween"
+                                  Style="width: 100%;">
+                            <div><strong>BULTOS:</strong> @totalBultos</div>
+                            <div><strong>PESO:</strong> @pesoTotal.ToString("N2") kg</div>
+                        </MudStack>
                     </MudStack>
                 </MudStack>
             </MudItem>
@@ -28,8 +31,16 @@
                             <TemplateColumn CellClass="d-flex justify-center align-center">
                                 <CellTemplate>
                                     <MudStack Row>
-                                        <MudText Class="mr-2">@context.Item.Code</MudText>                                        
-                                        <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Close" OnClick="() => ClickDeletePackage(context.Item)" />
+                                        <MudText Class="mr-2">@context.Item.Code</MudText>
+                                        @if (context.Item.Weight.HasValue)
+                                        {
+                                            <MudText Class="mr-2">@context.Item.Weight.Value.ToString("N1") Kg</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudText Class="mr-2">0 Kg</MudText>
+                                        }
+                                        <MudIconButton Size="@Size.Small"Icon="@Icons.Material.Outlined.DeleteForever" OnClick="() => ClickDeletePackage(context.Item)" />
                                     </MudStack>
                                 </CellTemplate>
                             </TemplateColumn>

@@ -15,23 +15,39 @@
             </MudItem>
             <MudItem xs="12">
                 <MudText>
-                    <MudDataGrid @ref="PackagesMudDataGrid" T="Models.Package" ServerData="ServerReload" Striped="true" Hover="true" Filterable="false" Loading="_loading" FixedHeader SelectedItemChanged="ClickSelectPackage" @bind-CurrentPage="GuideCurrentPage" ShowColumnOptions="false" Class="hide-datagrid-headers">
+                    <MudDataGrid @ref="PackagesMudDataGrid"
+                                 T="Models.Package"
+                                 ServerData="ServerReload"
+                                 Striped="true"
+                                 Hover="true"
+                                 Filterable="false"
+                                 Loading="_loading"
+                                 FixedHeader
+                                 SelectedItemChanged="ClickSelectPackage"
+                                 @bind-CurrentPage="GuideCurrentPage"
+                                 ShowColumnOptions="false"
+                                 Class="hide-datagrid-headers"
+                                 Height="400px">
                         <Columns>
                             <TemplateColumn CellClass="d-flex justify-center align-center">
                                 <CellTemplate>
                                     <MudStack Row>
-                                    <MudText Class="mr-2" Color="@((context.Item.Closed ?? false) ? Color.Success : Color.Inherit)"> @context.Item.Code</MudText>
-                                    <MudText Class="mr-2" Color="@((context.Item.Closed ?? false) ? Color.Success : Color.Inherit)"> @context.Item.Weight Kg</MudText>
-                                     <MudMenu>
-                                      <ActivatorContent>
+                                        <MudText Class="mr-2" Color="@((context.Item.Closed ?? false) ? Color.Success : Color.Inherit)">
+                                            @context.Item.Code
+                                        </MudText>
+                                        <MudText Class="mr-2" Color="@((context.Item.Closed ?? false) ? Color.Success : Color.Inherit)">
+                                            @context.Item.Weight Kg
+                                        </MudText>
+                                        <MudMenu>
+                                            <ActivatorContent>
                                                 <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Filled.EditNote"></MudIconButton>
-                                      </ActivatorContent>
-                                      <ChildContent>
-                                          <MudMenuItem Icon="@Icons.Material.Outlined.Print" OnClick="@(() => ClickPrintPackage(context.Item))" Disabled="@(!(context.Item.Closed ?? false))">Imprimir</MudMenuItem>
-                                          <MudMenuItem Icon="@Icons.Material.Outlined.LockOpen" OnClick="@(() => clickOpenPackage(context.Item))" Disabled="@(context.Item.Closed == false)">Abrir</MudMenuItem>
-                                          <MudMenuItem Icon="@Icons.Material.Outlined.AddToPhotos" OnClick="@(() => clickClonePackage(context.Item))" Disabled="@(context.Item.Closed == false)">Clonar</MudMenuItem>
-                                      </ChildContent>
-                                     </MudMenu>
+                                            </ActivatorContent>
+                                            <ChildContent>
+                                                <MudMenuItem Icon="@Icons.Material.Outlined.Print" OnClick="@(() => ClickPrintPackage(context.Item))" Disabled="@(!(context.Item.Closed ?? false))">Imprimir</MudMenuItem>
+                                                <MudMenuItem Icon="@Icons.Material.Outlined.LockOpen" OnClick="@(() => clickOpenPackage(context.Item))" Disabled="@(context.Item.Closed == false)">Abrir</MudMenuItem>
+                                                <MudMenuItem Icon="@Icons.Material.Outlined.AddToPhotos" OnClick="@(() => clickClonePackage(context.Item))" Disabled="@(context.Item.Closed == false)">Clonar</MudMenuItem>
+                                            </ChildContent>
+                                        </MudMenu>
                                     </MudStack>
                                 </CellTemplate>
                             </TemplateColumn>
