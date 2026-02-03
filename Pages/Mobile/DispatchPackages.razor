@@ -16,18 +16,31 @@
             </MudItem>
             <MudItem xs="12">
                 <MudText>
-                    <MudDataGrid @ref="PackagesMudDataGrid" T="Models.Package" ServerData="ServerReload" Striped="true" Hover="true" Filterable="false" Loading="_loading" FixedHeader  @bind-CurrentPage="GuideCurrentPage" ShowColumnOptions="false" Class="hide-datagrid-headers">
+                    <MudDataGrid @ref="PackagesMudDataGrid"
+                                 T="Models.Package"
+                                 ServerData="ServerReload"
+                                 Striped="true"
+                                 Hover="true"
+                                 Filterable="false"
+                                 Loading="_loading"
+                                 FixedHeader
+                                 @bind-CurrentPage="GuideCurrentPage"
+                                 ShowColumnOptions="false"
+                                 Class="hide-datagrid-headers"
+                                 Height="400px">
                         <Columns>
                             <TemplateColumn CellClass="d-flex justify-center align-center">
                                 <CellTemplate>
                                     <MudStack Row>
-                                        <MudText Class="mr-2" >@context.Item.Code</MudText>
-                                        <MudText Class="mr-2" >@context.Item.Weight Kg</MudText>
-                                        <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Filled.AddBox" OnClick="() => ClickAddPackage(context.Item)" />
+                                        <MudText Class="mr-2">@context.Item.Code</MudText>
+                                        <MudText Class="mr-2">@((context.Item.Weight ?? 0).ToString("N0")) Kg</MudText>
+                                        <MudIconButton Size="@Size.Small"
+                                                       Icon="@Icons.Material.Filled.AddBox"
+                                                       OnClick="() => ClickAddPackage(context.Item)" />
                                     </MudStack>
                                 </CellTemplate>
                             </TemplateColumn>
-                        </Columns>                        
+                        </Columns>
                     </MudDataGrid>
                 </MudText>
             </MudItem>
