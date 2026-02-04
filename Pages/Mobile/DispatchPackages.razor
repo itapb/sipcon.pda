@@ -27,7 +27,7 @@
                                  @bind-CurrentPage="GuideCurrentPage"
                                  ShowColumnOptions="false"
                                  Class="hide-datagrid-headers"
-                                 Height="400px">
+                                 Height="210px">
                         <Columns>
                             <TemplateColumn CellClass="d-flex justify-center align-center">
                                 <CellTemplate>
@@ -63,11 +63,17 @@
         display: none !important;
     }
 
-    #custom-helper-text {
-        font-size: 1rem;
-        color: @(IsTextUpdateSuppression ? "red" : "blue");
-        font-style: italic;
+    .scrollable-datagrid-container {
+        max-height: 55vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        position: relative;
     }
+
+        .scrollable-datagrid-container .mud-data-grid {
+            height: auto !important;
+            min-height: 300px;
+        }
 </style>
 @code { [Inject] private UserSession Session { get; set; } = null!;
     [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!;

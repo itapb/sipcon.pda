@@ -26,7 +26,7 @@
                     </MudPaper>
                 </MudStack>
             </MudItem>
-            <!-- Campo de búsqueda -->
+            <!-- Campo de búsqueda
             <MudItem xs="12">
                 <MudTextField T="string"
                               Margin="Margin.Dense"
@@ -46,7 +46,7 @@
                               HelperText="@mHelpText"
                               Variant="Variant.Filled"
                               HelperId="custom-helper-text" />
-            </MudItem>
+            </MudItem>  -->
             <!-- Vista de Búsqueda SIN Acordeón -->
             <MudItem xs="12">
                 @if (isSearching && !string.IsNullOrEmpty(searchString) && searchString.Trim().Length >= 3)
@@ -62,7 +62,7 @@
                                          Loading="_loading"
                                          Filterable="false"
                                          FixedHeader="true"
-                                         Height="400px"
+                                         Height="200px"
                                          Class="hide-datagrid-headers">
                                 <Columns>
                                     <TemplateColumn>
@@ -110,7 +110,7 @@
                                                                @key="@group.Key">
                                                 <ChildContent>
                                                     <MudTable Items="@group" Dense="true" Hover="true" Striped="true"
-                                                              FixedHeader="true" Height="400px" Style="table-layout: fixed; width: 100%; max-width: 1200px;">
+                                                              FixedHeader="true" Height="200px" Style="table-layout: fixed; width: 100%; max-width: 1200px;">
                                                         <HeaderContent>
                                                             <MudTh Style="width: 75%;">Descripción</MudTh>
                                                             <MudTh Style="text-align: center; width: 25%; background-color: #f5f5f5;">
@@ -136,7 +136,7 @@
                                                                @key="@group.Key">
                                                 <ChildContent>
                                                     <MudTable Items="@group" Dense="true" Hover="true" Striped="true"
-                                                              FixedHeader="true" Height="400px" Style="table-layout: fixed; width: 100%; max-width: 1200px;">
+                                                              FixedHeader="true" Height="200px" Style="table-layout: fixed; width: 100%; max-width: 1200px;">
                                                         <HeaderContent>
                                                             <MudTh Style="width: 75%;">Concesionario</MudTh>
                                                             <MudTh Style="text-align: center; width: 25%; background-color: #f5f5f5;">
@@ -170,6 +170,10 @@
             <MudItem xs="12">
                 <MudStack Row="true" Justify="Justify.Center">
                     <MudStack Row="true" Spacing="5">
+                        <MudFab Color="Color.Primary"
+                                StartIcon="@Icons.Material.Filled.Search"
+                                Size="Size.Medium"
+                                Href="" />
                         <MudFab Color="Color.Info"
                                 StartIcon="@Icons.Material.Filled.Refresh"
                                 Size="Size.Medium"
@@ -193,7 +197,7 @@
     }
 
     .scrollable-container {
-        max-height: 300px;
+        max-height: 210px;
         overflow-y: auto;
         overflow-x: hidden;
     }
