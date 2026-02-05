@@ -25,39 +25,79 @@
                 </MudStack>
             </MudItem>
             <MudItem xs="12">
-                <MudText>
-                    <MudDataGrid @ref="GuideDetailslMudDataGrid" T="Models.GuideDetails" ServerData="ServerReload" Striped="true" Hover="true" Filterable="false" Loading="_loading" FixedHeader  @bind-CurrentPage="PackageCurrentPage" ShowColumnOptions="false" Class="hide-datagrid-headers">
-                        <Columns>
-                            <TemplateColumn CellClass="d-flex justify-center align-center">
-                                <CellTemplate>
-                                    <MudStack Row>
-                                        <MudText Class="mr-2">@context.Item.Code</MudText>
-                                        @if (context.Item.Weight.HasValue)
-                                        {
-                                            <MudText Class="mr-2">@context.Item.Weight.Value.ToString("N1") Kg</MudText>
-                                        }
-                                        else
-                                        {
-                                            <MudText Class="mr-2">0 Kg</MudText>
-                                        }
-                                        <MudIconButton Size="@Size.Small"Icon="@Icons.Material.Outlined.DeleteForever" OnClick="() => ClickDeletePackage(context.Item)" />
-                                    </MudStack>
-                                </CellTemplate>
-                            </TemplateColumn>
-                        </Columns>
-                    </MudDataGrid>
-                </MudText>
+                <div class="scrollable-container" style="max-height: 300px; overflow-y: auto;">
+                    <MudText>
+                        <MudDataGrid @ref="GuideDetailslMudDataGrid"
+                                     T="Models.GuideDetails"
+                                     ServerData="ServerReload"
+                                     Striped="true"
+                                     Hover="true"
+                                     Filterable="false"
+                                     Loading="_loading"
+                                     FixedHeader="true"
+                                     Height="210px"
+                                     @bind-CurrentPage="PackageCurrentPage"
+                                     ShowColumnOptions="false"
+                                     Class="hide-datagrid-headers">
+                            <Columns>
+                                <TemplateColumn CellClass="d-flex justify-center align-center">
+                                    <CellTemplate>
+                                        <MudStack Row>
+                                            <MudText Class="mr-2">@context.Item.Code</MudText>
+                                            @if (context.Item.Weight.HasValue)
+                                            {
+                                                <MudText Class="mr-2">@context.Item.Weight.Value.ToString("N1") Kg</MudText>
+                                            }
+                                            else
+                                            {
+                                                <MudText Class="mr-2">0 Kg</MudText>
+                                            }
+                                            <MudIconButton Size="@Size.Small"
+                                                           Icon="@Icons.Material.Outlined.DeleteForever"
+                                                           OnClick="() => ClickDeletePackage(context.Item)" />
+                                        </MudStack>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                            </Columns>
+                        </MudDataGrid>
+                    </MudText>
+                </div>
             </MudItem>
-             <MudItem xs="12">
-                <MudTextField T="string" Placeholder="Buscar" Adornment="Adornment.Start" ValueChanged="@(s => OnSearch(s))" Value="searchString" HelperId="custom-helper-text" HelperText="@mHelpText" TextUpdateSuppression="@IsTextUpdateSuppression" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Style="height:40px;" />
-             </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string"
+                              Placeholder="Buscar"
+                              Adornment="Adornment.Start"
+                              ValueChanged="@(s => OnSearch(s))"
+                              Value="searchString"
+                              HelperId="custom-helper-text"
+                              HelperText="@mHelpText"
+                              TextUpdateSuppression="@IsTextUpdateSuppression"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              IconSize="Size.Medium"
+                              Class="mt-0"
+                              Style="height:40px;" />
+            </MudItem>
             <MudItem xs="12">
                 <MudStack Row="true" Justify="Justify.Center">
                     <MudStack Row="true" Spacing="3">
-                        <MudFab Color="Color.Success" StartIcon="@Icons.Material.Filled.Check" Size="Size.Medium" OnClick="ClickCheckGuides" Disabled="@(currentDispatch?.GuideClosed ?? false)" />
-                        <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" Size="Size.Medium" OnClick="ClickSearchPackage" Disabled="@(currentDispatch?.GuideClosed ?? false)" />
-                        <MudFab Color="Color.Info" StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Medium" OnClick="ClickRefreshGuideDetails" />
-                        <MudFab Color="Color.Error" StartIcon="@Icons.Material.Filled.Close" Size="Size.Medium" OnClick="ClickCloseGuideDetails" />
+                        <MudFab Color="Color.Success"
+                                StartIcon="@Icons.Material.Filled.Check"
+                                Size="Size.Medium"
+                                OnClick="ClickCheckGuides"
+                                Disabled="@(currentDispatch?.GuideClosed ?? false)" />
+                        <MudFab Color="Color.Primary"
+                                StartIcon="@Icons.Material.Filled.Search"
+                                Size="Size.Medium"
+                                OnClick="ClickSearchPackage"
+                                Disabled="@(currentDispatch?.GuideClosed ?? false)" />
+                        <MudFab Color="Color.Info"
+                                StartIcon="@Icons.Material.Filled.Refresh"
+                                Size="Size.Medium"
+                                OnClick="ClickRefreshGuideDetails" />
+                        <MudFab Color="Color.Error"
+                                StartIcon="@Icons.Material.Filled.Close"
+                                Size="Size.Medium"
+                                OnClick="ClickCloseGuideDetails" />
                     </MudStack>
                 </MudStack>
             </MudItem>
@@ -69,10 +109,16 @@
         display: none !important;
     }
 
-    #custom-helper-text {
-        font-size: 1rem;
-        color: @(IsTextUpdateSuppression ? "red" : "blue");
-        font-style: italic;
+    .scrollable-datagrid-container {
+        max-height: 55vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        position: relative;
+    }
+
+    .scrollable-datagrid-container .mud-data-grid {
+        height: auto !important;
+        min-height: 250px;
     }
 </style>
 @code { [Inject] private UserSession Session { get; set; } = null!;
