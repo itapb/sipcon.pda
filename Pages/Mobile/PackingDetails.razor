@@ -14,7 +14,7 @@
                 </MudStack>
             </MudItem>
             <MudItem xs="12">
-                <MudText>
+                <div class="scrollable-datagrid-container">
                     <MudDataGrid @ref="PackagesMudDataGrid"
                                  T="Models.Package"
                                  ServerData="ServerReload"
@@ -27,7 +27,7 @@
                                  @bind-CurrentPage="GuideCurrentPage"
                                  ShowColumnOptions="false"
                                  Class="hide-datagrid-headers"
-                                 Height="400px">
+                                 Height="250px">
                         <Columns>
                             <TemplateColumn CellClass="d-flex justify-center align-center">
                                 <CellTemplate>
@@ -53,7 +53,7 @@
                             </TemplateColumn>
                         </Columns>
                     </MudDataGrid>
-                </MudText>
+                </div>
             </MudItem>
             <MudItem xs="12">
                 <MudTextField T="string" Placeholder="Buscar" HelperId="custom-helper-text" HelperText="@mHelpText" Adornment="Adornment.Start" OnAdornmentClick="OnSearchClicK" Clearable="true" TextUpdateSuppression="@IsTextUpdateSuppression" OnKeyUp="CodeFieldOnKeyUp" @bind-Value="searchString" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Style="height:40px;" />
@@ -80,6 +80,18 @@
         font-size: 1rem;
         color: @(IsTextUpdateSuppression ? "red" : "blue");
         font-style: italic;
+    }
+
+    .scrollable-datagrid-container {
+        max-height: 50vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        position: relative;
+    }
+
+    .scrollable-datagrid-container .mud-data-grid {
+        height: auto !important;
+        min-height: 250px;
     }
 </style>
 @code {
