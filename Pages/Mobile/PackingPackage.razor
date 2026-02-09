@@ -14,25 +14,56 @@
                 </MudStack>
             </MudItem>
             <MudItem xs="12">
-                <MudText>
-                    <MudDataGrid @ref="PackageDetailMudDataGrid" T="Models.PackageDetail" ServerData="ServerReload" Striped="true" Hover="true" Filterable="false" Loading="_loading" FixedHeader SelectedItemChanged="ClickSelectPackage" @bind-CurrentPage="PackageCurrentPage" ShowColumnOptions="false" Class="hide-datagrid-headers" Height="calc(100vh - 320px)">
-                        <Columns>
-                            <TemplateColumn CellClass="d-flex justify-center align-center">
-                                <CellTemplate>
-                                    <MudStack Row>
-                                        <MudText Class="mr-2">@context.Item.PartName</MudText>
-                                        <MudText Class="mr-2">@context.Item.Quantity</MudText>
-                                        <MudIconButton Size="@Size.Small" HelperText="@mHelpText" Icon="@Icons.Material.Outlined.Close" OnClick="() => ClickRemovePart(context.Item)" Disabled="@(currentPacking?.PackageClosed ?? false)" />
-                                    </MudStack>
-                                </CellTemplate>
-                            </TemplateColumn>
-                        </Columns>
-                    </MudDataGrid>
-                </MudText>
+                <div class="scrollable-datagrid-container">
+                    <MudText>
+                        <MudDataGrid @ref="PackageDetailMudDataGrid"
+                                     T="Models.PackageDetail"
+                                     ServerData="ServerReload"
+                                     Striped="true"
+                                     Hover="true"
+                                     Filterable="false"
+                                     Loading="_loading"
+                                     FixedHeader
+                                     SelectedItemChanged="ClickSelectPackage"
+                                     @bind-CurrentPage="PackageCurrentPage"
+                                     ShowColumnOptions="false"
+                                     Class="hide-datagrid-headers"
+                                     Height="250px">
+                            <Columns>
+                                <TemplateColumn CellClass="d-flex justify-center align-center">
+                                    <CellTemplate>
+                                        <MudStack Row>
+                                            <MudText Class="mr-2">@context.Item.PartName</MudText>
+                                            <MudText Class="mr-2">@context.Item.Quantity</MudText>
+                                            <MudIconButton Size="@Size.Small"
+                                             HelperText="@mHelpText"
+                                             Icon="@Icons.Material.Outlined.Close"
+                                             OnClick="() => ClickRemovePart(context.Item)"
+                                             Disabled="@(currentPacking?.PackageClosed ?? false)" />
+                                        </MudStack>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                            </Columns>
+                        </MudDataGrid>
+                    </MudText>
+                </div>
             </MudItem>
             <MudItem xs="12">
-                <MudTextField T="string" Placeholder="Buscar2" HelperId="custom-helper-text" HelperText="@mHelpText" TextUpdateSuppression="@IsTextUpdateSuppression" OnKeyUp="CodeFieldOnKeyUp" OnAdornmentClick="OnSearchClicK" Clearable="true" Adornment="Adornment.Start" @bind-Value="searchString" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Style="height:40px;" />
-            </MudItem>
+                <MudTextField T="string"
+                              Placeholder="Buscar2"
+                              HelperId="custom-helper-text"
+                              HelperText="@mHelpText"
+                              TextUpdateSuppression="@IsTextUpdateSuppression"
+                              OnKeyUp="CodeFieldOnKeyUp"
+                              OnAdornmentClick="OnSearchClicK"
+                              Clearable="true"
+                              Adornment="Adornment.Start"
+                              @bind-Value="searchString"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              IconSize="Size.Medium"
+                              Class="mt-0"
+                              Style="height:40px;" />
+           </MudItem>
             <MudItem xs="12">
                 <MudStack Row="true" Justify="Justify.Center">
                     <MudStack Row="true" Spacing="3">
@@ -46,6 +77,29 @@
         </MudGrid>
     </MudPaper>
 </div>
+
+<style>
+    .hide-datagrid-headers .mud-table-head {
+        display: none !important;
+    }
+
+    #custom-helper-text {
+        font-size: 1rem;
+        color: @(IsTextUpdateSuppression ? "red" : "blue");
+        font-style: italic;
+    }
+    .scrollable-datagrid-container {
+        max-height: 50vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        position: relative;
+    }
+ 
+    .scrollable-datagrid-container .mud-data-grid {
+        height: auto !important;
+        min-height: 250px;
+    }
+</style>
 <style>
     .hide-datagrid-headers .mud-table-head {
         display: none !important;
