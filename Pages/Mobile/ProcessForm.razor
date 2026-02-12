@@ -172,11 +172,11 @@
     //private bool ValidSerial(string inputSerial) => (movementDetails!.SerialCode!.Equals(inputSerial));
 
     private bool ValidPart(string? movementType, string inputCode)    
-    {
-        bool isvalidPart = (((movementType == "T" || movementType == "P") && inputCode == "0") ||
-        (movementDetails!.PartBarcode!.ToUpper() == inputCode || movementDetails!.PartInnerCode!.ToUpper() == inputCode));
-        return isvalidPart;
-    }   
+   {
+    bool isvalidPart = (((movementType == "T" || movementType == "P") && inputCode == "0" && ModeParameter == "P") ||
+    (movementDetails!.PartBarcode!.ToUpper() == inputCode || movementDetails!.PartInnerCode!.ToUpper() == inputCode));
+    return isvalidPart;
+   }   
     private bool ValidReal(string? movementType, string typeId ,int realQty)
     {
         bool isValid = ((movementType == "R" && typeId == "P" && realQty == movementDetails!.RequiredQty) ||
