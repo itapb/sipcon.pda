@@ -173,8 +173,12 @@
 
     private bool ValidPart(string? movementType, string inputCode)    
    {
-    bool isvalidPart = (((movementType == "T" || movementType == "P") && inputCode == "0" && ModeParameter == "P") ||
-    (movementDetails!.PartBarcode!.ToUpper() == inputCode || movementDetails!.PartInnerCode!.ToUpper() == inputCode));
+    bool isvalidPart = 
+    (
+    (movementType == "P" && inputCode == "0") || //RECOLECCION: SE PERMITE CERO TANTO EN PICKING COMO ENTREGA
+    (movementType == "T" && inputCode == "0" && ModeParameter == "P") || // TRASLADO: SE PERMITE CERO SOLO EN PICKING
+    (movementDetails!.PartBarcode!.ToUpper() == inputCode || movementDetails!.PartInnerCode!.ToUpper() == inputCode)
+    );
     return isvalidPart;
    }   
     private bool ValidReal(string? movementType, string typeId ,int realQty)
