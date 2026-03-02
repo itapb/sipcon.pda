@@ -33,7 +33,7 @@
                                 <CellTemplate>
                                     <MudStack Row>
                                         <MudText Class="mr-2">@context.Item.Code</MudText>
-                                        <MudText Class="mr-2">@((context.Item.Weight ?? 0).ToString("N0")) Kg</MudText>
+                                        <MudText Class="mr-2">@((context.Item.Weight ?? 0).ToString("N2")) Kg</MudText>
                                         <MudIconButton Size="@Size.Small"
                                                        Icon="@Icons.Material.Filled.AddBox"
                                                        OnClick="() => ClickAddPackage(context.Item)" />

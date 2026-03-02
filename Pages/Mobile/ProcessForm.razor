@@ -171,19 +171,23 @@
     }
     //private bool ValidSerial(string inputSerial) => (movementDetails!.SerialCode!.Equals(inputSerial));
 
-     private bool ValidPart(string? movementType, string inputCode)    
- {
-     bool isvalidPart = (((movementType == "T" || movementType == "P") && inputCode == "0") ||
-     (movementDetails!.PartBarcode!.ToUpper() == inputCode || movementDetails!.PartInnerCode!.ToUpper() == inputCode));
-     return isvalidPart;
- }   
- private bool ValidReal(string? movementType, string typeId ,int realQty)
- {
-     bool isValid = ((movementType == "R" && typeId == "P" && realQty == movementDetails!.RequiredQty) ||
-     ((movementType == "T" || movementType == "P") && typeId == "P" && realQty >= 0 && realQty <= movementDetails!.RequiredQty) ||        
-     (typeId == "D" && realQty > 0));
-     return isValid;
- }
+    private bool ValidPart(string? movementType, string inputCode)    
+   {
+    bool isvalidPart = 
+    (
+    (movementType == "P" && inputCode == "0") || //RECOLECCION: SE PERMITE CERO TANTO EN PICKING COMO ENTREGA
+    (movementType == "T" && inputCode == "0" && ModeParameter == "P") || // TRASLADO: SE PERMITE CERO SOLO EN PICKING
+    (movementDetails!.PartBarcode!.ToUpper() == inputCode || movementDetails!.PartInnerCode!.ToUpper() == inputCode)
+    );
+    return isvalidPart;
+   }   
+    private bool ValidReal(string? movementType, string typeId ,int realQty)
+    {
+        bool isValid = ((movementType == "R" && typeId == "P" && realQty == movementDetails!.RequiredQty) ||
+        ((movementType == "T" || movementType == "P") && typeId == "P" && realQty >= 0 && realQty <= movementDetails!.RequiredQty) ||        
+        (typeId == "D" && realQty > 0));
+        return isValid;
+    } 
 
     private record movementMobile(int? Id, int? MovementId, int? PartId, int? LocationId, int? RealQty, string? SerialCode, int? PartialTypeId);
 
