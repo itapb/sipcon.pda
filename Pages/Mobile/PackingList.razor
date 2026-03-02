@@ -293,8 +293,10 @@
         searchResults.Clear();
 
         await LoadInitialPackingList();
-        await searchStringField!.FocusAsync();
-
+        if (searchStringField is not null ){
+            await searchStringField!.FocusAsync();
+        }
+        
         // Asegurar que los datos se reagrupen según el modo actual
         RegroupData();
     }
