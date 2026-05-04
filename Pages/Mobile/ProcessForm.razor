@@ -52,7 +52,8 @@
         font-style: italic;
     }
  </style>
-@code { [Inject] private UserSession Session { get; set; } = null!;
+@code {
+    [Inject] private UserSession Session { get; set; } = null!;
     [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!;   
 
     [Inject] private HttpClient Http { get; set; } = default!;
@@ -83,6 +84,7 @@
     bool IsValidReal = false;
     int mStepId = 1;
     private MudTextField<string>? bardCodeField;
+    private bool _isProcessing = false;
 
 
     protected override async Task OnInitializedAsync()
@@ -98,77 +100,93 @@
             await bardCodeField.FocusAsync();
         }
     }
+  
     private async Task NextStep(){
-        switch (mStepId)
+        if (_isProcessing) return;
+        _isProcessing = true;
+
+        try
         {
-            case 1: //OBTENER SOLICITUD POR USUARIO Y TIPO DE MOVIMIENTO
-                await GetMovementDetailsByUser();
+            switch (mStepId)
+            {
+                case 1: //OBTENER SOLICITUD POR USUARIO Y TIPO DE MOVIMIENTO
+                    await GetMovementDetailsByUser();
 
-                mStepId = locationId != movementDetails?.LocationId ?  2 : 3;
-                if (mStepId == 3) mHelpText = "Escanee el repuesto o codigo de barras";
-                break;
-            case 2: //VALIDAR UBICACIÓN DEL MOVIMIENTO EN CURSO                
-                IsValidLocation = await GetValidLocation(InputCode.Trim().ToUpper());
-                if (IsValidLocation)
-                {
-                    mStepId = 3;
-                    mHelpText = "Escanee el repuesto o codigo de barras";
-                }
-                else
-                    mHelpText = "Invalida ubicación, escanee nuevamente.";
-
-                break;
-            case 3: // VALIDAR REPUESTO DEL MOVIMIENTO EN CURSO                
-
-                IsValidPart = ValidPart(MovementType, InputCode.Trim().ToUpper());
-                if (IsValidPart)
-                {
-                    if ((MovementType == "T" || MovementType == "P") && InputCode == "0")
+                    mStepId = locationId != movementDetails?.LocationId ? 2 : 3;
+                    if (mStepId == 3) mHelpText = "Escanee el repuesto o codigo de barras";
+                    break;
+                case 2: //VALIDAR UBICACIÓN DEL MOVIMIENTO EN CURSO                
+                    IsValidLocation = await GetValidLocation(InputCode.Trim().ToUpper());
+                    if (IsValidLocation)
                     {
-                        InputRealQty = 0;
-                        movementDetails!.PartId = 0;
-                    
-                        await PostMovemmentDetailMobile();
-                    } 
+                        mStepId = 3;
+                        mHelpText = "Escanee el repuesto o codigo de barras";
+                    }
                     else
+                        mHelpText = "Invalida ubicación, escanee nuevamente.";
+
+                    break;
+                case 3: // VALIDAR REPUESTO DEL MOVIMIENTO EN CURSO                
+
+                    IsValidPart = ValidPart(MovementType, InputCode.Trim().ToUpper());
+                    if (IsValidPart)
                     {
-                        partDescription = movementDetails!.PartDescription;
-                        RequiredQty = movementDetails!.RequiredQty;
-                        if ((movementDetails!.Serializable ?? false) && MovementType == "P" && movementDetails?.TypeId!.ToUpper() == "P" )
+                        if ((MovementType == "T" || MovementType == "P" || MovementType == "R") && InputCode == "0")
                         {
-                            mStepId = 4; mHelpText = "Escanee el Serial";
+                            InputRealQty = 0;
+                            movementDetails!.PartId = 0;
+
+                            await PostMovemmentDetailMobile();
                         }
                         else
                         {
-                            mStepId = 5; mHelpText = "Escanee la cantidad";
+                            partDescription = movementDetails!.PartDescription;
+                            RequiredQty = movementDetails!.RequiredQty;
+                            if ((movementDetails!.Serializable ?? false) && MovementType == "P" && movementDetails?.TypeId!.ToUpper() == "P")
+                            {
+                                mStepId = 4; mHelpText = "Escanee el Serial";
+                            }
+                            else
+                            {
+                                mStepId = 5; mHelpText = "Escanee la cantidad";
+                            }
+                            IsValidSerial = true;
                         }
-                        IsValidSerial = true;
+
+                    }
+                    else
+                    {
+                        mHelpText = "Invalido repuesto, escanee nuevamente.";
                     }
 
-                }
-                else
-                {
-                    mHelpText = "Invalido repuesto, escanee nuevamente.";
-                }
-
-                break;
-            case 4: //VALIDAR SERIAL.
-                if (InputCode.Trim().Length > 0)            
-                {                     
-                    InputSerial = InputCode.Trim(); // Store the scanned serial
-                    mStepId = 5; 
-                    mHelpText = "Escanee la cantidad";
-                }
-                break;
-            case 5: //VALIDAR CANTIDAD REAL DEL MOVIMIENTO
-                int resultQty;
-                IsValidReal = int.TryParse(InputCode.Trim(), out resultQty) && ValidReal(MovementType, movementDetails!.TypeId!, resultQty);
-                if (IsValidReal) { mStepId = 6; InputRealQty = resultQty; mHelpText = "Listo, Puede Procesar!"; } else mHelpText = "Invalida cantidad, intente nuevamente.";
-                break;           
+                    break;
+                case 4: //VALIDAR SERIAL.
+                    if (InputCode.Trim().Length > 0)
+                    {
+                        InputSerial = InputCode.Trim(); // Store the scanned serial
+                        mStepId = 5;
+                        mHelpText = "Escanee la cantidad";
+                    }
+                    break;
+                case 5: //VALIDAR CANTIDAD REAL DEL MOVIMIENTO
+                    int resultQty;
+                    IsValidReal = int.TryParse(InputCode.Trim(), out resultQty) && ValidReal(MovementType, movementDetails!.TypeId!, resultQty);
+                    if (IsValidReal) { mStepId = 6; InputRealQty = resultQty; mHelpText = "Listo, Puede Procesar!"; } else mHelpText = "Invalida cantidad, intente nuevamente.";
+                    break;
+            }
+            InputCode = string.Empty;                    
+        if (bardCodeField is not null)
+            {
+                await bardCodeField.SetText(string.Empty);
+                await bardCodeField.FocusAsync();
+            }
         }
-        InputCode = string.Empty; // Reset input code
-        if (bardCodeField is not null) {await bardCodeField.SetText(string.Empty); await bardCodeField.FocusAsync(); }
+        finally
+        {
+            _isProcessing = false;
+        }
     }
+   
     //private bool ValidSerial(string inputSerial) => (movementDetails!.SerialCode!.Equals(inputSerial));
 
     private bool ValidPart(string? movementType, string inputCode)    
@@ -177,6 +195,7 @@
     (
     (movementType == "P" && inputCode == "0") || //RECOLECCION: SE PERMITE CERO TANTO EN PICKING COMO ENTREGA
     (movementType == "T" && inputCode == "0" && ModeParameter == "P") || // TRASLADO: SE PERMITE CERO SOLO EN PICKING
+    (movementType == "R" && inputCode == "0" && ModeParameter == "P") || // RECEPCION: SE PERMITE CERO SOLO EN PICKING PARA MASIVO
     (movementDetails!.PartBarcode!.ToUpper() == inputCode || movementDetails!.PartInnerCode!.ToUpper() == inputCode)
     );
     return isvalidPart;
@@ -201,14 +220,14 @@
             var content = await response.Content.ReadFromJsonAsync<WebApiResponse<Location>>();
             locationName = content!.data!.Name! ;
             locationId = content.data.Id;
-            InputSerial = string.Empty; // Reset serial input                           ;
+            InputSerial = string.Empty; // Reset serial input          
         }
 
         return isValidLocation;
     }
     private async Task PostMovemmentDetailMobile()
     {
-        var PartialTypeIdInput = ("RTP".Contains(MovementType ?? "") && movementDetails!.TypeId!.ToUpper() == "P" && InputRealQty < movementDetails!.RequiredQty) ? await ReasonConfirmation() : 0;
+        var PartialTypeIdInput = ("RTP".Contains(MovementType ?? "") && movementDetails!.TypeId!.ToUpper() == "P" && InputRealQty < movementDetails!.RequiredQty && movementDetails!.PartId != 0) ? await ReasonConfirmation() : 0;
         if (PartialTypeIdInput != null)
         {
             var AnMovementMobile = new movementMobile(Id: movementDetails!.Id, MovementId: movementDetails!.MovementId, PartId: movementDetails.PartId, PartialTypeId: PartialTypeIdInput, LocationId: locationId, RealQty: InputRealQty, SerialCode: InputSerial);
@@ -217,7 +236,13 @@
             if (result_Post_Zone.IsSuccessStatusCode)
             {
                 await DialogService.ShowDialog("Movimiento Procesado!", "Procesado", "OK", Color.Success, Icons.Material.Filled.Check);
-                await StepOne(); // Reset to step one after processing
+                mStepId = 1;
+                InputCode = string.Empty;
+                InputSerial = string.Empty;
+                await GetMovementDetailsByUser();
+                mStepId = locationId != movementDetails?.LocationId ? 2 : 3;
+                if (mStepId == 3) mHelpText = "Escanee el repuesto o codigo de barras";
+                if (bardCodeField is not null) await bardCodeField.FocusAsync();
                 StateHasChanged();
             }
             else if (result_Post_Zone.StatusCode == System.Net.HttpStatusCode.BadRequest)
