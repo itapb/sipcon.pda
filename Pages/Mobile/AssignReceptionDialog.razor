@@ -1,0 +1,26 @@
+﻿@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField T="string"
+                      Label="Ubicación de Recepción"
+                      @bind-Value="_locationName"
+                      Immediate="true"
+                      Variant="Variant.Filled"
+                      Margin="Margin.Dense" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary"
+                   OnClick="Submit"
+                   Disabled="@string.IsNullOrWhiteSpace(_locationName)">Asignar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    private string _locationName = string.Empty;
+
+    private void Cancel() => MudDialog.Cancel();
+    private void Submit() => MudDialog.Close(DialogResult.Ok(_locationName));
+}

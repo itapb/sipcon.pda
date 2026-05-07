@@ -35,7 +35,7 @@
                 <MudStack Row="true" Justify="Justify.Center">
                     <MudStack Row="true" Spacing="4">
                         <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" Size="Size.Medium" OnClick="OnClickSearch" />
-                        <MudFab Color="Color.Surface" StartIcon="@Icons.Material.Filled.NavigateNext" Size="Size.Medium" OnClick="OnClickNavigateNext" />
+                        <MudFab Color="Color.Surface" StartIcon="@Icons.Material.Filled.PostAdd" Size="Size.Medium" OnClick="OnClickAssignLocation" Style="@(MovementType == "R" ? "" : "display:none")" />
                         <MudFab Color="Color.Success" StartIcon="@Icons.Material.Filled.Check" Size="Size.Medium" OnClick="OnClickCheck" />
                         <MudFab Color="Color.Error" StartIcon="@Icons.Material.Filled.Close" Href="process-list" Size="Size.Medium" />
                     </MudStack>
@@ -50,12 +50,12 @@
         font-size: 1.1rem;
         color: blue;
         font-style: italic;
-    }
+    }   
  </style>
 @code {
     [Inject] private UserSession Session { get; set; } = null!;
-    [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!;   
-
+    [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!; 
+    
     [Inject] private HttpClient Http { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;   
     [Parameter] public string? MovementType { get; set; } = string.Empty;
@@ -85,6 +85,7 @@
     int mStepId = 1;
     private MudTextField<string>? bardCodeField;
     private bool _isProcessing = false;
+    private string _btnStyle => MovementType == "R" ? "" : "display:none";
 
 
     protected override async Task OnInitializedAsync()
@@ -287,10 +288,45 @@
     {
         await StepOne();
     }
-    private async Task OnClickNavigateNext(MouseEventArgs args)
+
+    private async Task OnClickAssignLocation(MouseEventArgs args)
     {
-        await Task.CompletedTask; // Placeholder for future functionality
+        var dialog = await DialogService.ShowAsync<AssignReceptionDialog>("Asignar Recepción");
+        var result = await dialog.Result;
+    
+        if (!result.Canceled)
+        {
+            string locationName = result.Data!.ToString()!;
+        
+            var response = await Http.PostAsync(
+                $"api/Movements/PostReceptionAutoAssign?locationName={locationName}&userId={Session.UserId}&supplierId={Session.SupplierId}",
+                null);
+        
+            if (response.IsSuccessStatusCode)
+            {
+                await DialogService.ShowDialog("Recepciones asignadas!", "Éxito", "OK", Color.Success, Icons.Material.Filled.Check);
+                await RefreshAfterAction();
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                await DialogService.ShowDialog(errorMsg, "Error", "OK", Color.Error, Icons.Material.Filled.Error);
+            }
+        }
     }
+
+    private async Task RefreshAfterAction()
+    {
+        _isProcessing = false;
+        mStepId = 1;
+        InitializeFormFields();
+        await GetMovementDetailsByUser();
+        mStepId = locationId != movementDetails?.LocationId ? 2 : 3;
+        if (mStepId == 3) mHelpText = "Escanee el repuesto o codigo de barras";
+        if (bardCodeField is not null) await bardCodeField.FocusAsync();
+        StateHasChanged();
+    }
+
     private void InitializeFormFields()
     {
         mHelpText = "Aqui escanee ubicacion...";
