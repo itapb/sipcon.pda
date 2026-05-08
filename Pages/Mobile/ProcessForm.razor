@@ -55,7 +55,7 @@
 @code {
     [Inject] private UserSession Session { get; set; } = null!;
     [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!; 
-    
+
     [Inject] private HttpClient Http { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;   
     [Parameter] public string? MovementType { get; set; } = string.Empty;
@@ -101,7 +101,7 @@
             await bardCodeField.FocusAsync();
         }
     }
-  
+
     private async Task NextStep(){
         if (_isProcessing) return;
         _isProcessing = true;
@@ -120,6 +120,7 @@
                     IsValidLocation = await GetValidLocation(InputCode.Trim().ToUpper());
                     if (IsValidLocation)
                     {
+                        movementDetails!.LocationName = locationName;
                         mStepId = 3;
                         mHelpText = "Escanee el repuesto o codigo de barras";
                     }
@@ -176,7 +177,7 @@
                     break;
             }
             InputCode = string.Empty;                    
-        if (bardCodeField is not null)
+            if (bardCodeField is not null)
             {
                 await bardCodeField.SetText(string.Empty);
                 await bardCodeField.FocusAsync();
@@ -187,20 +188,20 @@
             _isProcessing = false;
         }
     }
-   
+
     //private bool ValidSerial(string inputSerial) => (movementDetails!.SerialCode!.Equals(inputSerial));
 
     private bool ValidPart(string? movementType, string inputCode)    
-   {
-    bool isvalidPart = 
-    (
-    (movementType == "P" && inputCode == "0") || //RECOLECCION: SE PERMITE CERO TANTO EN PICKING COMO ENTREGA
-    (movementType == "T" && inputCode == "0" && ModeParameter == "P") || // TRASLADO: SE PERMITE CERO SOLO EN PICKING
-    (movementType == "R" && inputCode == "0" && ModeParameter == "P") || // RECEPCION: SE PERMITE CERO SOLO EN PICKING PARA MASIVO
-    (movementDetails!.PartBarcode!.ToUpper() == inputCode || movementDetails!.PartInnerCode!.ToUpper() == inputCode)
-    );
-    return isvalidPart;
-   }   
+    {
+        bool isvalidPart = 
+        (
+        (movementType == "P" && inputCode == "0") || //RECOLECCION: SE PERMITE CERO TANTO EN PICKING COMO ENTREGA
+        (movementType == "T" && inputCode == "0" && ModeParameter == "P") || // TRASLADO: SE PERMITE CERO SOLO EN PICKING
+        (movementType == "R" && inputCode == "0" && ModeParameter == "P") || // RECEPCION: SE PERMITE CERO SOLO EN PICKING PARA MASIVO
+        (movementDetails!.PartBarcode!.ToUpper() == inputCode || movementDetails!.PartInnerCode!.ToUpper() == inputCode)
+        );
+        return isvalidPart;
+    }   
     private bool ValidReal(string? movementType, string typeId ,int realQty)
     {
         bool isValid = ((movementType == "R" && typeId == "P" && realQty == movementDetails!.RequiredQty) ||
@@ -255,7 +256,7 @@
             {
                 var errorMessage = await result_Post_Zone.Content.ReadAsStringAsync();
                 throw new Exception(errorMessage);
-                
+
             }
         }
 
@@ -293,15 +294,15 @@
     {
         var dialog = await DialogService.ShowAsync<AssignReceptionDialog>("Asignar Recepción");
         var result = await dialog.Result;
-    
+
         if (!result.Canceled)
         {
             string locationName = result.Data!.ToString()!;
-        
+
             var response = await Http.PostAsync(
                 $"api/Movements/PostReceptionAutoAssign?locationName={locationName}&userId={Session.UserId}&supplierId={Session.SupplierId}",
                 null);
-        
+
             if (response.IsSuccessStatusCode)
             {
                 await DialogService.ShowDialog("Recepciones asignadas!", "Éxito", "OK", Color.Success, Icons.Material.Filled.Check);
@@ -309,7 +310,8 @@
             }
             else
             {
-                var errorMsg = await response.Content.ReadAsStringAsync();
+                var errorResponse = await response.Content.ReadFromJsonAsync<WebApiResponse<Object?>>();
+                var errorMsg = errorResponse?.message ?? "Error desconocido";
                 await DialogService.ShowDialog(errorMsg, "Error", "OK", Color.Error, Icons.Material.Filled.Error);
             }
         }
