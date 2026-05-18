@@ -13,12 +13,12 @@ namespace Sipcon.Mobile.WebApp.Models
         public Color Color { get; set; } = Color.Default;
 
 
-        public ModuleAction(string text, string? href = null, bool disabled = false, string? icon = null, int idAction = 0, string actionName = "", Color color = Color.Default)
+        public ModuleAction(string text, string? href = null, bool disabled = false, string? icon = null, int idAction = 0, string _actionName = "", Color color = Color.Default)
             : base(text, href, disabled, icon)
         {
             IdAction = idAction;
 
-            ActionName = actionName;
+            ActionName = _actionName;
 
             Color = color;
         }
