@@ -1,0 +1,792 @@
+﻿@page "/mobile-stock-count"
+@using Sipcon.Mobile.WebApp.Layout
+@using Sipcon.Mobile.WebApp.Models
+@using System.Web
+@layout MobileLayout
+
+<div style="flex-shrink: 0;" class="pa-3 jpv1-dialog-body-background">
+    <MudPaper Elevation="2" Class="pa-3">
+        <MudGrid Spacing="2">
+            <!-- Header -->
+            <MudItem xs="12">
+                <MudStack Row="true" StretchItems="StretchItems.Start" Justify="Justify.FlexEnd">
+                    <MudPaper Class="pa-2 mud-theme-info mud-typography-subtitle1">
+                        @if (IsPreInventory)
+                        {
+                            <text>PRE-INVENTARIO @TypeName</text>
+                        }
+                        else
+                        {
+                            <text>INVENTARIO @TypeName</text>
+                        }
+                        @if (!string.IsNullOrEmpty(AssignmentName) && AssignmentType == "Z")
+                        {
+                            <text> - ZONA: @AssignmentName</text>
+                        }
+                    </MudPaper>
+                    @if (!IsPreInventory && _pendingCount > 0)
+                    {   
+                        <MudPaper Class="pa-2 mud-theme-success mud-typography-caption">
+                            Pendientes: @_pendingCount
+                        </MudPaper>
+                    }
+                </MudStack>
+            </MudItem>
+
+            <!-- Formulario de conteo -->
+            @if (_formVisible)
+            {
+                <!-- Ubicación  -->
+                <MudItem xs="12">
+                    <MudTextField T="string"
+                                  ReadOnly="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentText="Ubicación :"
+                                  Margin="Margin.Dense"
+                                  @bind-Value="_currentLocationName"
+                                  Color="@(IsPreInventory || _locationConfirmed ? Color.Success : Color.Default)">
+                    </MudTextField>
+                </MudItem>
+
+                <!-- Repuesto -->
+                <MudItem xs="12">
+                    <MudTextField T="string"
+                                  ReadOnly="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentText="Repuesto :"
+                                  Margin="Margin.Dense"
+                                  @bind-Value="_currentPartDescription"
+                                  Color="@(IsPreInventory || _partConfirmed ? Color.Success : Color.Default)">
+                    </MudTextField>
+                </MudItem>
+
+                <!-- Cantida-->
+                <MudItem xs="12">
+                    <MudTextField T="int?"
+                                  ReadOnly="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentText="Cantidad :"
+                                  Margin="Margin.Dense"
+                                  @bind-Value="_currentQuantity"
+                                  Color="@(_quantityConfirmed ? Color.Success : Color.Default)">
+                    </MudTextField>
+                </MudItem>
+
+                <!-- Campo de escaneo -->
+                <MudItem xs="12">
+                    <MudFocusTrap Disabled="false" DefaultFocus="DefaultFocus.LastChild">
+                        <MudTextField @ref="_codeField"
+                                      T="string"
+                                      Margin="Margin.Dense"
+                                      Adornment="Adornment.Start"
+                                      OnAdornmentClick="OnSearchClick"
+                                      Clearable="true"
+                                      TextUpdateSuppression="true"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      IconSize="Size.Medium"
+                                      OnKeyUp="CodeFieldOnKeyUp"
+                                      @bind-Value="InputCode"
+                                      HelperText="@_helperText"
+                                      Variant="Variant.Filled"
+                                      HelperId="custom-helper-text"
+                                      Color="@_inputColor">
+                        </MudTextField>
+                    </MudFocusTrap>
+                </MudItem>
+            }
+
+            <MudItem xs="12">
+                <MudStack Row="true" Justify="Justify.Center">
+                    <MudStack Row="true" Spacing="4">
+                        <MudFab Color="Color.Warning"
+                                StartIcon="@Icons.Material.Filled.Add"
+                                Size="Size.Medium"
+                                OnClick="OnClickAdd"
+                                Disabled="@(_isProcessing)" />
+
+                        <MudFab Color="Color.Success"
+                                StartIcon="@Icons.Material.Filled.Check"
+                                Size="Size.Medium"
+                                OnClick="OnClickProcess"
+                                Disabled="@(!_canProcess || _isProcessing)" />
+
+                        <MudFab Color="Color.Error"
+                                StartIcon="@Icons.Material.Filled.Close"
+                                Size="Size.Medium"
+                                Href="mobile-stock-count-type" />
+                    </MudStack>
+                </MudStack>
+            </MudItem>
+
+            <!-- Mensaje de completado -->
+            @if (!IsPreInventory && _pendingCount == 0 && _allCompleted)
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Class="pa-4">
+                        <MudText Typo="Typo.h6" Class="text-center">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Medium" Class="mr-2" />
+                            ¡Conteo completado!
+                        </MudText>
+                        <MudText Typo="Typo.body2" Class="text-center mt-2">
+                            Todos los repuestos asignados han sido contados.
+                        </MudText>
+                    </MudAlert>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+</div>
+
+<style>
+    #custom-helper-text {
+        font-size: 1.1rem;
+        font-style: italic;
+    }
+</style>
+
+@code {
+    [Inject] private UserSession Session { get; set; } = null!;
+    [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!;
+    [Inject] private HttpClient Http { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    // ==================== PARÁMETROS DE NAVEGACIÓN ====================
+    private int? CountType { get; set; }
+    private string? TypeName { get; set; }
+    private string? AssignmentType { get; set; }
+    private string? AssignmentName { get; set; }
+    private int? IdInventoryCount { get; set; }
+    private int? HasAssignment { get; set; }
+    private int? IdCount { get; set; }
+    private int? IdStatus { get; set; }
+
+    // ==================== PROPIEDADES DE ESTADO ====================
+    private bool IsPreInventory => IdStatus == 20;
+    private bool IsFinalInventory => IdStatus == 6;
+
+    // ==================== CONTROLES DE UI ====================
+    private MudTextField<string>? _codeField;
+    private string InputCode = string.Empty;
+    private string _helperText = "Escanee ubicación...";
+    private Color _inputColor = Color.Default;
+    private bool _isProcessing = false;
+    private bool _formVisible = false;
+    private bool _allCompleted = false;
+
+    // ==================== DATOS DEL CONTEO ACTUAL ====================
+    private string? _currentLocationName;
+    private string? _currentPartDescription;
+    private int? _currentQuantity;
+    private int? _currentLocationId;
+    private int? _currentPartId;
+    private string? _currentPartCode;
+    private int? _currentDetailId;
+
+    // ==================== ESTADO DE VALIDACIÓN ====================
+    private bool _locationConfirmed = false;
+    private bool _partConfirmed = false;
+    private bool _quantityConfirmed = false;
+    private bool _canProcess => _locationConfirmed && _partConfirmed && _quantityConfirmed;
+
+    // ==================== LISTA DE PENDIENTES ====================
+    private List<InventoryDetailResponse> _pendingDetails = new();
+    private int _pendingCount = 0;
+    private int _currentPendingIndex = -1;
+    private bool _isUnassignedMode = false;
+
+    // ==================== PASOS DEL FLUJO ====================
+    private enum Step
+    {
+        Idle,
+        WaitingLocation,
+        WaitingPart,
+        WaitingQuantity,
+        Complete
+    }
+    private Step _currentStep = Step.Idle;
+
+    // ==================== INICIALIZACIÓN ====================
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+
+        CountType = int.TryParse(queryParams["countType"], out int ct) ? ct : null;
+        TypeName = queryParams["typeName"];
+        AssignmentType = queryParams["assignmentType"];
+        AssignmentName = queryParams["assignmentName"];
+        IdInventoryCount = int.TryParse(queryParams["IdInventoryCount"], out int idic) ? idic : null;
+        HasAssignment = int.TryParse(queryParams["hasAssignment"], out int ha) ? ha : null;
+        IdCount = int.TryParse(queryParams["idCount"], out int idCount) ? idCount : null;
+        IdStatus = int.TryParse(queryParams["idStatus"], out int idStatus) ? idStatus : null;
+
+        // 🔍 LOGS DE DEPURACIÓN
+        Console.WriteLine("=== PARÁMETROS RECIBIDOS ===");
+        Console.WriteLine($"CountType: {CountType}");
+        Console.WriteLine($"TypeName: {TypeName}");
+        Console.WriteLine($"AssignmentType: {AssignmentType}");
+        Console.WriteLine($"AssignmentName: {AssignmentName}");
+        Console.WriteLine($"IdInventoryCount: {IdInventoryCount}");
+        Console.WriteLine($"HasAssignment: {HasAssignment}");
+        Console.WriteLine($"IdCount: {IdCount}");
+        Console.WriteLine($"IdStatus: {IdStatus}");
+        Console.WriteLine("=============================");
+
+        // Si IdInventoryCount es null, intentar con IdCount
+        if (!IdInventoryCount.HasValue && IdCount.HasValue)
+        {
+            Console.WriteLine($"⚠️ IdInventoryCount es null, usando IdCount: {IdCount}");
+            IdInventoryCount = IdCount;
+        }
+
+        await AuthenticationStateProvider.RefresMobileStaticVariables();
+
+        if (IsPreInventory)
+        {
+            _formVisible = false;
+            _currentStep = Step.Idle;
+            _helperText = "Presione (+) para comenzar";
+        }
+        else if (IsFinalInventory)
+        {
+            await LoadPendingDetails();
+        }
+
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _codeField is not null && _formVisible)
+        {
+            await _codeField.FocusAsync();
+        }
+    }
+
+    // ==================== CARGA DE PENDIENTES ====================
+    private async Task LoadPendingDetails()
+    {
+        try
+        {
+            _isProcessing = true;
+            _allCompleted = false;
+
+            var response = await Http.GetAsync(
+                $"api/StockCount/GetDetails?userId={Session.UserId}&supplierId={Session.SupplierId}&inventoryId={IdInventoryCount}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<InventoryDetailResponse>>>();
+
+                if (result?.Data != null && result.Data.Any())
+                {
+                    _pendingDetails = result.Data.Where(d => d.IdStatus == 2).ToList();
+                    _pendingCount = _pendingDetails.Count;
+
+                    if (_pendingDetails.Any())
+                    {
+                        _formVisible = true;
+                        _currentPendingIndex = 0;
+                        await LoadPendingDetail(_currentPendingIndex);
+                    }
+                    else
+                    {
+                        _formVisible = false;
+                        _allCompleted = true;
+                        _helperText = "Todos los repuestos han sido contados";
+                    }
+                }
+                else
+                {
+                    _formVisible = false;
+                    _allCompleted = true;
+                    _helperText = "No hay repuestos asignados";
+                }
+            }
+            else
+            {
+                await DialogService.ShowDialog("Error al cargar pendientes", "Error", "OK", Color.Error, Icons.Material.Filled.Error);
+                _formVisible = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowDialog($"Error: {ex.Message}", "Error", "OK", Color.Error, Icons.Material.Filled.Error);
+            _formVisible = false;
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPendingDetail(int index)
+    {
+        if (index < 0 || index >= _pendingDetails.Count)
+        {
+            _formVisible = false;
+            _allCompleted = true;
+            _helperText = "¡Conteo completado!";
+            _currentStep = Step.Idle;
+            StateHasChanged();
+            return;
+        }
+
+        var detail = _pendingDetails[index];
+        _currentLocationName = detail.LocationName;
+        _currentPartDescription = $"{detail.PartCode} - {detail.PartDescription}";
+        _currentLocationId = detail.IdLocation;
+        _currentPartId = detail.IdPart;
+        _currentDetailId = null;
+        _currentQuantity = null;
+
+        _locationConfirmed = false;
+        _partConfirmed = false;
+        _quantityConfirmed = false;
+        _isUnassignedMode = false;
+
+        _currentStep = Step.WaitingLocation;
+        _helperText = "Escanee ubicación para confirmar...";
+        _inputColor = Color.Default;
+
+        InputCode = string.Empty;
+        if (_codeField is not null)
+        {
+            await _codeField.SetText(string.Empty);
+            await _codeField.FocusAsync();
+        }
+
+        StateHasChanged();
+    }
+
+    // ==================== MANEJO DE ESCANEO ====================
+    private async Task CodeFieldOnKeyUp(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && InputCode.Length > 0)
+        {
+            await ProcessScan();
+        }
+    }
+
+    private async Task OnSearchClick(MouseEventArgs args)
+    {
+        if (InputCode.Length > 0)
+        {
+            await ProcessScan();
+        }
+    }
+
+    private async Task ProcessScan()
+    {
+        if (_isProcessing || string.IsNullOrWhiteSpace(InputCode)) return;
+
+        try
+        {
+            _isProcessing = true;
+
+            switch (_currentStep)
+            {
+                case Step.WaitingLocation:
+                    await ValidateLocation(InputCode.Trim().ToUpper());
+                    break;
+
+                case Step.WaitingPart:
+                    await ValidatePart(InputCode.Trim().ToUpper());
+                    break;
+
+                case Step.WaitingQuantity:
+                    await ValidateQuantity(InputCode.Trim());
+                    break;
+
+                case Step.Complete:
+                    break;
+
+                case Step.Idle:
+                    break;
+            }
+
+            InputCode = string.Empty;
+            if (_codeField is not null)
+            {
+                await _codeField.SetText(string.Empty);
+                await _codeField.FocusAsync();
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _helperText = $"Error: {ex.Message}";
+            _inputColor = Color.Error;
+            StateHasChanged();
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    // ==================== VALIDACIÓN DE UBICACIÓN ====================
+    private async Task ValidateLocation(string locationCode)
+    {
+        try
+        {
+            var response = await Http.GetAsync(
+                $"api/StockCount/ValidateLocation?userId={Session.UserId}&supplierId={Session.SupplierId}&inventoryId={IdInventoryCount}&locationCode={locationCode}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<LocationValidationResponse>>();
+
+                if (result?.Data != null && result.Data.IsValid)
+                {
+                    if (IsFinalInventory && !_isUnassignedMode)
+                    {
+                        if (result.Data.LocationId == _currentLocationId)
+                        {
+                            _locationConfirmed = true;
+                            _currentLocationId = result.Data.LocationId;
+                            _currentLocationName = result.Data.LocationName;  
+                            _helperText = "Escanee repuesto...";
+                            _inputColor = Color.Success;
+                            _currentStep = Step.WaitingPart;
+                        }
+                        else
+                        {
+                            _helperText = "Ubicación no coincide con la asignada";
+                            _inputColor = Color.Error;
+                            _locationConfirmed = false;
+                        }
+                    }
+                    else
+                    {
+                        _locationConfirmed = true;
+                        _currentLocationId = result.Data.LocationId;
+                        _currentLocationName = result.Data.LocationName;  
+                        _helperText = "Escanee repuesto...";
+                        _inputColor = Color.Success;
+                        _currentStep = Step.WaitingPart;
+                    }
+                }
+                else
+                {
+                    _helperText = result?.Data?.Message ?? "Ubicación no válida";
+                    _inputColor = Color.Error;
+                    _locationConfirmed = false;
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+
+                try
+                {
+                    var errorResult = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
+                    _helperText = errorResult?.Message ?? "Error al validar ubicación";
+                }
+                catch
+                {
+                    _helperText = errorContent;
+                }
+
+                _inputColor = Color.Error;
+                _locationConfirmed = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _helperText = $"Error: {ex.Message}";
+            _inputColor = Color.Error;
+            _locationConfirmed = false;
+        }
+
+        StateHasChanged();
+    }
+
+    // ==================== VALIDACIÓN DE REPUESTO ====================
+    private async Task ValidatePart(string partCode)
+    {
+        try
+        {
+            if (!_currentLocationId.HasValue)
+            {
+                _helperText = "Primero valide la ubicación";
+                _inputColor = Color.Error;
+                return;
+            }
+
+            var response = await Http.GetAsync(
+                $"api/StockCount/ValidatePart?userId={Session.UserId}&supplierId={Session.SupplierId}&locationId={_currentLocationId}&partCode={partCode}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<PartValidationResponse>>();
+
+                if (result?.Data != null && result.Data.IsValid)
+                {
+                    if (IsFinalInventory && !_isUnassignedMode)
+                    {
+                        if (result.Data.PartId == _currentPartId)
+                        {
+                            _partConfirmed = true;
+                            _currentPartCode = result.Data.PartCode;
+                            _currentPartDescription = $"{result.Data.PartCode} - {result.Data.PartDescription}";
+                            _helperText = "Ingrese cantidad...";
+                            _inputColor = Color.Success;
+                            _currentStep = Step.WaitingQuantity;
+                        }
+                        else
+                        {
+                            _helperText = "Repuesto no coincide con el asignado";
+                            _inputColor = Color.Error;
+                            _partConfirmed = false;
+                        }
+                    }
+                    else
+                    {
+                        _partConfirmed = true;
+                        _currentPartId = result.Data.PartId;
+                        _currentPartCode = result.Data.PartCode;
+                        _currentPartDescription = $"{result.Data.PartCode} - {result.Data.PartDescription}";
+                        _helperText = "Ingrese cantidad...";
+                        _inputColor = Color.Success;
+                        _currentStep = Step.WaitingQuantity;
+                    }
+                }
+                else
+                {
+                    _helperText = result?.Data?.Message ?? "Repuesto no válido en esta ubicación";
+                    _inputColor = Color.Error;
+                    _partConfirmed = false;
+                }
+            }
+            else
+            {
+                var error = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
+                _helperText = error?.Message ?? "Error al validar repuesto";
+                _inputColor = Color.Error;
+                _partConfirmed = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _helperText = $"Error: {ex.Message}";
+            _inputColor = Color.Error;
+            _partConfirmed = false;
+        }
+
+        StateHasChanged();
+    }
+
+    // ==================== VALIDACIÓN DE CANTIDAD ====================
+    private async Task ValidateQuantity(string quantityInput)
+    {
+        if (int.TryParse(quantityInput, out int quantity) && quantity > 0)
+        {
+            _currentQuantity = quantity;
+            _quantityConfirmed = true;
+            _helperText = "Listo. Puede procesar";
+            _inputColor = Color.Success;
+            _currentStep = Step.Complete;
+        }
+        else
+        {
+            _helperText = "Ingrese una cantidad válida (mayor a 0)";
+            _inputColor = Color.Error;
+            _quantityConfirmed = false;
+        }
+
+        StateHasChanged();
+    }
+
+    // ==================== BOTÓN (+) ====================
+    private async Task OnClickAdd()
+    {
+        if (_isProcessing) return;
+
+        try
+        {
+            _isProcessing = true;
+
+            if (IsPreInventory)
+            {
+                _formVisible = !_formVisible;
+
+                if (_formVisible)
+                {
+                    ResetForm();
+                    _currentStep = Step.WaitingLocation;
+                    _helperText = "Escanee ubicación...";
+                    _inputColor = Color.Default;
+                }
+                else
+                {
+                    _currentStep = Step.Idle;
+                    _helperText = "Presione (+) para comenzar";
+                }
+            }
+            else if (IsFinalInventory)
+            {
+                if (_formVisible && _currentPendingIndex >= 0)
+                {
+                    _isUnassignedMode = true;
+                    ResetForm();
+                    _currentStep = Step.WaitingLocation;
+                    _helperText = "MODO REPUESTO ADICIONAL - Escanee ubicación...";
+                    _inputColor = Color.Warning;
+                }
+                else if (_allCompleted)
+                {
+                    _formVisible = true;
+                    _isUnassignedMode = true;
+                    ResetForm();
+                    _currentStep = Step.WaitingLocation;
+                    _helperText = "MODO REPUESTO ADICIONAL - Escanee ubicación...";
+                    _inputColor = Color.Warning;
+                }
+                else
+                {
+                    _helperText = "No hay pendientes para agregar adicionales";
+                    await DialogService.ShowDialog("No hay pendientes activos", "Información", "OK", Color.Info, Icons.Material.Filled.Info);
+                }
+            }
+
+            if (_codeField is not null)
+            {
+                await _codeField.FocusAsync();
+            }
+
+            StateHasChanged();
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    // ==================== BOTÓN (✔) ====================
+    private async Task OnClickProcess()
+    {
+        if (_isProcessing) return;
+        if (!_canProcess)
+        {
+            _helperText = "Complete todos los pasos antes de guardar";
+            _inputColor = Color.Error;
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            _isProcessing = true;
+
+            var data = new
+            {
+                IdInventory = IdInventoryCount,
+                LocationCode = _currentLocationName ?? string.Empty,  
+                PartCode = _currentPartCode ?? string.Empty,
+                Quantity = _currentQuantity
+            };
+
+            HttpResponseMessage response;
+
+            if (IsPreInventory)
+            {
+                response = await Http.PostAsJsonAsync($"api/StockCount/PostStockCount?userId={Session.UserId}&supplierId={Session.SupplierId}", data);
+            }
+            else if (IsFinalInventory && _isUnassignedMode)
+            {
+                response = await Http.PostAsJsonAsync($"api/StockCount/AddUnassignedPart?userId={Session.UserId}&supplierId={Session.SupplierId}", data);
+            }
+            else
+            {
+                response = await Http.PostAsJsonAsync($"api/StockCount/PostStockCount?userId={Session.UserId}&supplierId={Session.SupplierId}", data);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<StockCountResponse>>();
+
+                await DialogService.ShowDialog(
+                    $"Conteo guardado exitosamente! {_currentQuantity} unidades",
+                    "Éxito",
+                    "OK",
+                    Color.Success,
+                    Icons.Material.Filled.Check);
+
+                if (IsPreInventory)
+                {
+                    _formVisible = false;
+                    _currentStep = Step.Idle;
+                    _helperText = "Presione (+) para continuar";
+                    ResetForm();
+                }
+                else if (IsFinalInventory)
+                {
+                    if (_isUnassignedMode)
+                    {
+                        _isUnassignedMode = false;
+                        await LoadPendingDetail(_currentPendingIndex);
+                    }
+                    else
+                    {
+                        _currentPendingIndex++;
+                        await LoadPendingDetail(_currentPendingIndex);
+                    }
+                }
+
+                if (_codeField is not null)
+                {
+                    await _codeField.FocusAsync();
+                }
+            }
+            else
+            {
+                var error = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
+                await DialogService.ShowDialog(
+                    error?.Message ?? "Error al guardar el conteo",
+                    "Error",
+                    "OK",
+                    Color.Error,
+                    Icons.Material.Filled.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowDialog(
+                $"Error: {ex.Message}",
+                "Error",
+                "OK",
+                Color.Error,
+                Icons.Material.Filled.Error);
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    // ==================== MÉTODOS AUXILIARES ====================
+    private void ResetForm()
+    {
+        _currentLocationName = null;
+        _currentPartDescription = null;
+        _currentQuantity = null;
+        _currentLocationId = null;
+        _currentPartId = null;
+        _currentPartCode = null;
+        _locationConfirmed = false;
+        _partConfirmed = false;
+        _quantityConfirmed = false;
+        _inputColor = Color.Default;
+        InputCode = string.Empty;
+
+        if (_codeField is not null)
+        {
+            _codeField.SetText(string.Empty);
+        }
+    }
+}
