@@ -11,24 +11,23 @@
             <MudItem xs="12">
                 <MudStack Row="true" StretchItems="StretchItems.Start" Justify="Justify.FlexEnd">
                     <MudPaper Class="pa-2 mud-theme-info mud-typography-subtitle1">
-                        @if (IsPreInventory)
-                        {
-                            <text>PRE-INVENTARIO @TypeName</text>
-                        }
-                        else
-                        {
-                            <text>INVENTARIO @TypeName</text>
-                        }
-                        @if (!string.IsNullOrEmpty(AssignmentName) && AssignmentType == "Z")
-                        {
-                            <text> - ZONA: @AssignmentName</text>
-                        }
+                        TFI: #@IdInventoryCount
                     </MudPaper>
-                    @if (!IsPreInventory && _pendingCount > 0)
-                    {   
-                        <MudPaper Class="pa-2 mud-theme-success mud-typography-caption">
-                            Pendientes: @_pendingCount
-                        </MudPaper>
+                    @if (!IsPreInventory)
+                    {
+                        @if (_pendingCount > 0)
+                        {
+                            <MudPaper Class="pa-2 mud-theme-success mud-typography-caption">
+                                Pendientes: @_pendingCount
+                            </MudPaper>
+                        }
+                        else if (_allCompleted)
+                        {
+                            <MudPaper Class="pa-2 mud-theme-success mud-typography-caption d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                                Completado
+                            </MudPaper>
+                        }
                     }
                 </MudStack>
             </MudItem>
@@ -36,7 +35,7 @@
             <!-- Formulario de conteo -->
             @if (_formVisible)
             {
-                <!-- Ubicación  -->
+                <!-- Ubicación -->
                 <MudItem xs="12">
                     <MudTextField T="string"
                                   ReadOnly="true"
@@ -60,7 +59,7 @@
                     </MudTextField>
                 </MudItem>
 
-                <!-- Cantida-->
+                <!-- Cantidad -->
                 <MudItem xs="12">
                     <MudTextField T="int?"
                                   ReadOnly="true"
@@ -102,8 +101,14 @@
                                 StartIcon="@Icons.Material.Filled.Add"
                                 Size="Size.Medium"
                                 OnClick="OnClickAdd"
-                                Disabled="@(_isProcessing)" />
+                                Disabled="@(_isProcessing || !IsFinalInventory)" />
 
+                        <MudFab Color="Color.Info"
+                                StartIcon="@Icons.Material.Filled.Refresh"
+                                Size="Size.Medium"
+                                OnClick="OnClickRefresh" />
+
+                        
                         <MudFab Color="Color.Success"
                                 StartIcon="@Icons.Material.Filled.Check"
                                 Size="Size.Medium"
@@ -117,22 +122,6 @@
                     </MudStack>
                 </MudStack>
             </MudItem>
-
-            <!-- Mensaje de completado -->
-            @if (!IsPreInventory && _pendingCount == 0 && _allCompleted)
-            {
-                <MudItem xs="12">
-                    <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Class="pa-4">
-                        <MudText Typo="Typo.h6" Class="text-center">
-                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Medium" Class="mr-2" />
-                            ¡Conteo completado!
-                        </MudText>
-                        <MudText Typo="Typo.body2" Class="text-center mt-2">
-                            Todos los repuestos asignados han sido contados.
-                        </MudText>
-                    </MudAlert>
-                </MudItem>
-            }
         </MudGrid>
     </MudPaper>
 </div>
@@ -149,23 +138,18 @@
     [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!;
     [Inject] private HttpClient Http { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;
-    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = null!;
 
-    // ==================== PARÁMETROS DE NAVEGACIÓN ====================
-    private int? CountType { get; set; }
+    private int? CountType { get; set; }           // 1 = Cíclico, 2 = Físico
     private string? TypeName { get; set; }
-    private string? AssignmentType { get; set; }
-    private string? AssignmentName { get; set; }
     private int? IdInventoryCount { get; set; }
     private int? HasAssignment { get; set; }
-    private int? IdCount { get; set; }
     private int? IdStatus { get; set; }
 
-    // ==================== PROPIEDADES DE ESTADO ====================
-    private bool IsPreInventory => IdStatus == 20;
-    private bool IsFinalInventory => IdStatus == 6;
+    private bool IsPreInventory => IdStatus == 20 && CountType == 2;
+    private bool IsFinalInventory => IdStatus == 6 && CountType == 2;
+    private bool IsCyclic => IdStatus == 6 && CountType == 1;
 
-    // ==================== CONTROLES DE UI ====================
     private MudTextField<string>? _codeField;
     private string InputCode = string.Empty;
     private string _helperText = "Escanee ubicación...";
@@ -174,7 +158,6 @@
     private bool _formVisible = false;
     private bool _allCompleted = false;
 
-    // ==================== DATOS DEL CONTEO ACTUAL ====================
     private string? _currentLocationName;
     private string? _currentPartDescription;
     private int? _currentQuantity;
@@ -183,19 +166,16 @@
     private string? _currentPartCode;
     private int? _currentDetailId;
 
-    // ==================== ESTADO DE VALIDACIÓN ====================
     private bool _locationConfirmed = false;
     private bool _partConfirmed = false;
     private bool _quantityConfirmed = false;
     private bool _canProcess => _locationConfirmed && _partConfirmed && _quantityConfirmed;
 
-    // ==================== LISTA DE PENDIENTES ====================
     private List<InventoryDetailResponse> _pendingDetails = new();
     private int _pendingCount = 0;
     private int _currentPendingIndex = -1;
     private bool _isUnassignedMode = false;
 
-    // ==================== PASOS DEL FLUJO ====================
     private enum Step
     {
         Idle,
@@ -206,7 +186,6 @@
     }
     private Step _currentStep = Step.Idle;
 
-    // ==================== INICIALIZACIÓN ====================
     protected override async Task OnInitializedAsync()
     {
         var uri = new Uri(NavigationManager.Uri);
@@ -214,46 +193,25 @@
 
         CountType = int.TryParse(queryParams["countType"], out int ct) ? ct : null;
         TypeName = queryParams["typeName"];
-        AssignmentType = queryParams["assignmentType"];
-        AssignmentName = queryParams["assignmentName"];
         IdInventoryCount = int.TryParse(queryParams["IdInventoryCount"], out int idic) ? idic : null;
         HasAssignment = int.TryParse(queryParams["hasAssignment"], out int ha) ? ha : null;
-        IdCount = int.TryParse(queryParams["idCount"], out int idCount) ? idCount : null;
         IdStatus = int.TryParse(queryParams["idStatus"], out int idStatus) ? idStatus : null;
-
-        // 🔍 LOGS DE DEPURACIÓN
-        Console.WriteLine("=== PARÁMETROS RECIBIDOS ===");
-        Console.WriteLine($"CountType: {CountType}");
-        Console.WriteLine($"TypeName: {TypeName}");
-        Console.WriteLine($"AssignmentType: {AssignmentType}");
-        Console.WriteLine($"AssignmentName: {AssignmentName}");
-        Console.WriteLine($"IdInventoryCount: {IdInventoryCount}");
-        Console.WriteLine($"HasAssignment: {HasAssignment}");
-        Console.WriteLine($"IdCount: {IdCount}");
-        Console.WriteLine($"IdStatus: {IdStatus}");
-        Console.WriteLine("=============================");
-
-        // Si IdInventoryCount es null, intentar con IdCount
-        if (!IdInventoryCount.HasValue && IdCount.HasValue)
-        {
-            Console.WriteLine($"⚠️ IdInventoryCount es null, usando IdCount: {IdCount}");
-            IdInventoryCount = IdCount;
-        }
 
         await AuthenticationStateProvider.RefresMobileStaticVariables();
 
+        _formVisible = true;
+
         if (IsPreInventory)
         {
-            _formVisible = false;
-            _currentStep = Step.Idle;
-            _helperText = "Presione (+) para comenzar";
+            ResetForm();
+            _currentStep = Step.WaitingLocation;
+            _helperText = "Escanee ubicación...";
+            _inputColor = Color.Default;
         }
-        else if (IsFinalInventory)
+        else if (IsFinalInventory || IsCyclic)
         {
             await LoadPendingDetails();
         }
-
-        await base.OnInitializedAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -281,7 +239,18 @@
 
                 if (result?.Data != null && result.Data.Any())
                 {
-                    _pendingDetails = result.Data.Where(d => d.IdStatus == 2).ToList();
+                    var detalles = result.Data;
+
+                    // Si veníamos de "Completado" y el GET (con NOLOCK) todavía trae
+                    // el detalle recién procesado, lo ignoramos para no revertir el estado.
+                    if (_allCompleted && _currentDetailId.HasValue)
+                    {
+                        detalles = detalles
+                            .Where(d => d.IdInventoryDetail != _currentDetailId.Value)
+                            .ToList();
+                    }
+
+                    _pendingDetails = detalles;
                     _pendingCount = _pendingDetails.Count;
 
                     if (_pendingDetails.Any())
@@ -307,13 +276,13 @@
             else
             {
                 await DialogService.ShowDialog("Error al cargar pendientes", "Error", "OK", Color.Error, Icons.Material.Filled.Error);
-                _formVisible = false;
+                _formVisible = true;
             }
         }
         catch (Exception ex)
         {
             await DialogService.ShowDialog($"Error: {ex.Message}", "Error", "OK", Color.Error, Icons.Material.Filled.Error);
-            _formVisible = false;
+            _formVisible = true;
         }
         finally
         {
@@ -326,7 +295,7 @@
     {
         if (index < 0 || index >= _pendingDetails.Count)
         {
-            _formVisible = false;
+            _formVisible = true;
             _allCompleted = true;
             _helperText = "¡Conteo completado!";
             _currentStep = Step.Idle;
@@ -339,7 +308,8 @@
         _currentPartDescription = $"{detail.PartCode} - {detail.PartDescription}";
         _currentLocationId = detail.IdLocation;
         _currentPartId = detail.IdPart;
-        _currentDetailId = null;
+        _currentPartCode = detail.PartCode;
+        _currentDetailId = detail.IdInventoryDetail;
         _currentQuantity = null;
 
         _locationConfirmed = false;
@@ -433,8 +403,10 @@
     {
         try
         {
+            bool isUnassigned = _isUnassignedMode;
+
             var response = await Http.GetAsync(
-                $"api/StockCount/ValidateLocation?userId={Session.UserId}&supplierId={Session.SupplierId}&inventoryId={IdInventoryCount}&locationCode={locationCode}");
+                $"api/StockCount/ValidateLocation?userId={Session.UserId}&supplierId={Session.SupplierId}&inventoryId={IdInventoryCount}&locationCode={locationCode}&isUnassigned={isUnassigned}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -442,13 +414,13 @@
 
                 if (result?.Data != null && result.Data.IsValid)
                 {
-                    if (IsFinalInventory && !_isUnassignedMode)
+                    if ((IsFinalInventory || IsCyclic) && !_isUnassignedMode)
                     {
                         if (result.Data.LocationId == _currentLocationId)
                         {
                             _locationConfirmed = true;
                             _currentLocationId = result.Data.LocationId;
-                            _currentLocationName = result.Data.LocationName;  
+                            _currentLocationName = result.Data.LocationName;
                             _helperText = "Escanee repuesto...";
                             _inputColor = Color.Success;
                             _currentStep = Step.WaitingPart;
@@ -464,7 +436,7 @@
                     {
                         _locationConfirmed = true;
                         _currentLocationId = result.Data.LocationId;
-                        _currentLocationName = result.Data.LocationName;  
+                        _currentLocationName = result.Data.LocationName;
                         _helperText = "Escanee repuesto...";
                         _inputColor = Color.Success;
                         _currentStep = Step.WaitingPart;
@@ -526,7 +498,7 @@
 
                 if (result?.Data != null && result.Data.IsValid)
                 {
-                    if (IsFinalInventory && !_isUnassignedMode)
+                    if ((IsFinalInventory || IsCyclic) && !_isUnassignedMode)
                     {
                         if (result.Data.PartId == _currentPartId)
                         {
@@ -583,7 +555,8 @@
     // ==================== VALIDACIÓN DE CANTIDAD ====================
     private async Task ValidateQuantity(string quantityInput)
     {
-        if (int.TryParse(quantityInput, out int quantity) && quantity > 0)
+        // Acepta 0 y positivos, rechaza negativos
+        if (int.TryParse(quantityInput, out int quantity) && quantity >= 0)
         {
             _currentQuantity = quantity;
             _quantityConfirmed = true;
@@ -593,7 +566,7 @@
         }
         else
         {
-            _helperText = "Ingrese una cantidad válida (mayor a 0)";
+            _helperText = "Ingrese una cantidad válida (0 o mayor)";
             _inputColor = Color.Error;
             _quantityConfirmed = false;
         }
@@ -612,6 +585,7 @@
 
             if (IsPreInventory)
             {
+                // En preinventario el botón está deshabilitado, pero por si acaso
                 _formVisible = !_formVisible;
 
                 if (_formVisible)
@@ -634,7 +608,7 @@
                     _isUnassignedMode = true;
                     ResetForm();
                     _currentStep = Step.WaitingLocation;
-                    _helperText = "MODO REPUESTO ADICIONAL - Escanee ubicación...";
+                    _helperText = "MODO REPUESTO SOBRANTE - Escanee ubicación...";
                     _inputColor = Color.Warning;
                 }
                 else if (_allCompleted)
@@ -643,7 +617,7 @@
                     _isUnassignedMode = true;
                     ResetForm();
                     _currentStep = Step.WaitingLocation;
-                    _helperText = "MODO REPUESTO ADICIONAL - Escanee ubicación...";
+                    _helperText = "MODO REPUESTO SOBRANTE - Escanee ubicación...";
                     _inputColor = Color.Warning;
                 }
                 else
@@ -682,28 +656,23 @@
         {
             _isProcessing = true;
 
-            var data = new
+            // Determinar el Id del detalle:
+            // - Conteo normal → _currentDetailId (ID del INVENTORYCOUNTDETAIL)
+            // - Botón (+) → 0
+            int? detailId = _isUnassignedMode ? 0 : _currentDetailId;
+
+            var data = new StockCountDetail
             {
+                Id = detailId,
                 IdInventory = IdInventoryCount,
-                LocationCode = _currentLocationName ?? string.Empty,  
+                LocationCode = _currentLocationName ?? string.Empty,
                 PartCode = _currentPartCode ?? string.Empty,
                 Quantity = _currentQuantity
             };
 
-            HttpResponseMessage response;
-
-            if (IsPreInventory)
-            {
-                response = await Http.PostAsJsonAsync($"api/StockCount/PostStockCount?userId={Session.UserId}&supplierId={Session.SupplierId}", data);
-            }
-            else if (IsFinalInventory && _isUnassignedMode)
-            {
-                response = await Http.PostAsJsonAsync($"api/StockCount/AddUnassignedPart?userId={Session.UserId}&supplierId={Session.SupplierId}", data);
-            }
-            else
-            {
-                response = await Http.PostAsJsonAsync($"api/StockCount/PostStockCount?userId={Session.UserId}&supplierId={Session.SupplierId}", data);
-            }
+            var response = await Http.PostAsJsonAsync(
+                $"api/StockCount/PostStockCount?userId={Session.UserId}&supplierId={Session.SupplierId}",
+                data);
 
             if (response.IsSuccessStatusCode)
             {
@@ -718,26 +687,37 @@
 
                 if (IsPreInventory)
                 {
-                    _formVisible = false;
-                    _currentStep = Step.Idle;
-                    _helperText = "Presione (+) para continuar";
                     ResetForm();
+                    _currentStep = Step.WaitingLocation;
+                    _helperText = "Escanee ubicación...";
+                    _inputColor = Color.Default;
+                    _formVisible = true;
                 }
-                else if (IsFinalInventory)
+                else if (IsFinalInventory || IsCyclic)
                 {
-                    if (_isUnassignedMode)
+                    // Marcado optimista: si el detalle procesado era el último pendiente
+                    // conocido, mostramos "Completado" sin esperar al GET (que puede
+                    // leer con NOLOCK antes del COMMIT del POST).
+                    if (!_isUnassignedMode && _pendingDetails.Count <= 1)
                     {
-                        _isUnassignedMode = false;
-                        await LoadPendingDetail(_currentPendingIndex);
+                        _pendingDetails.Clear();
+                        _pendingCount = 0;
+                        _allCompleted = true;
+                        _formVisible = false;
+                        _currentStep = Step.Idle;
                     }
                     else
                     {
-                        _currentPendingIndex++;
-                        await LoadPendingDetail(_currentPendingIndex);
+                        _formVisible = true;
                     }
+
+                    _isUnassignedMode = false;
                 }
 
-                if (_codeField is not null)
+                _isProcessing = false;
+                await OnClickRefresh();
+
+                if (_codeField is not null && _formVisible)
                 {
                     await _codeField.FocusAsync();
                 }
@@ -769,6 +749,20 @@
         }
     }
 
+    private async Task OnClickRefresh()
+    {
+        if (_isProcessing) return;
+        try
+        {
+            _isProcessing = true;
+            await LoadPendingDetails();
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
     // ==================== MÉTODOS AUXILIARES ====================
     private void ResetForm()
     {
@@ -778,6 +772,7 @@
         _currentLocationId = null;
         _currentPartId = null;
         _currentPartCode = null;
+        _currentDetailId = null;
         _locationConfirmed = false;
         _partConfirmed = false;
         _quantityConfirmed = false;

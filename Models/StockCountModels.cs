@@ -6,21 +6,10 @@ namespace Sipcon.Mobile.WebApp.Models
 
     public class StockCountDetail
     {
-        [Required]
-        public int? IdInventory { get; set; }
+        // Id = 0 o null → botón (+)
+        // Id > 0 → conteo normal
+        public int? Id { get; set; }
 
-        [Required]
-        public string? LocationCode { get; set; }
-
-        [Required]
-        public string? PartCode { get; set; }
-
-        [Required]
-        public int? Quantity { get; set; }
-    }
-
-    public class UnassignedPartRequest
-    {
         [Required]
         public int? IdInventory { get; set; }
 
@@ -36,23 +25,14 @@ namespace Sipcon.Mobile.WebApp.Models
 
     // ==================== RESPONSE MODELS ====================
 
-    public class ActiveInventoryResponse
-    {
-        public bool HasActiveInventory { get; set; }
-    }
-
     public class InventoryTypeOption
     {
-        public int IdCountType { get; set; }
-        public string VName { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
-        public string AssignmentType { get; set; } = string.Empty;
-        public string AssignmentName { get; set; } = string.Empty;
+        public string Tipo { get; set; } = string.Empty;            // 'FISICO' / 'CICLICO'
         public int IdInventoryCount { get; set; }
-        public int HasAssignment { get; set; }
-        public int IdStatus { get; set; }
+        public int IdCountType { get; set; }                        // 1 = Cíclico, 2 = Físico
+        public int IdStatus { get; set; }                           // 20 = preinventario, 6 = activo
         public string VDescription { get; set; } = string.Empty;
-        public int IdCount { get; set; }
+        public int TieneAsignacion { get; set; }                    // 1 = tiene, 0 = no
     }
 
     public class LocationValidationResponse
@@ -77,15 +57,19 @@ namespace Sipcon.Mobile.WebApp.Models
 
     public class InventoryDetailResponse
     {
+        public int IdInventoryDetail { get; set; }
         public int IdLocation { get; set; }
-        public string LocationName { get; set; } = string.Empty;
         public int IdPart { get; set; }
+        public int? IQuantityOld { get; set; }
+        public int? IQuantityNew { get; set; }
+        public string? IForm { get; set; }
+        public string LocationName { get; set; } = string.Empty;
         public string PartCode { get; set; } = string.Empty;
         public string PartDescription { get; set; } = string.Empty;
-        public int IdStatus { get; set; }
-        public int IdCount { get; set; }
-        public bool IsPending { get; set; }
-        
+        public int? IdAssign { get; set; }
+        public string? VAssignType { get; set; }
+        public string Modo { get; set; } = string.Empty;
+        public string Mensaje { get; set; } = string.Empty;
     }
 
     public class StockCountResponse
