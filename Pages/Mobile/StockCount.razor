@@ -203,10 +203,16 @@
 
         if (IsPreInventory)
         {
-            ResetForm();
-            _currentStep = Step.WaitingLocation;
-            _helperText = "Escanee ubicación...";
-            _inputColor = Color.Default;
+            await LoadPendingDetails();
+
+            if (!_pendingDetails.Any())
+            {
+                ResetForm();
+                _currentStep = Step.WaitingLocation;
+                _helperText = "Escanee ubicación...";
+                _inputColor = Color.Default;
+                _formVisible = true;
+            }
         }
         else if (IsFinalInventory || IsCyclic)
         {
@@ -261,16 +267,40 @@
                     }
                     else
                     {
-                        _formVisible = false;
-                        _allCompleted = true;
-                        _helperText = "Todos los repuestos han sido contados";
+                        _formVisible = true;
+
+                        if (IsPreInventory)
+                        {
+                            _allCompleted = false;
+                            ResetForm();
+                            _currentStep = Step.WaitingLocation;
+                            _helperText = "Escanee ubicación...";
+                            _inputColor = Color.Default;
+                        }
+                        else
+                        {
+                            _allCompleted = true;
+                            _helperText = "Todos los repuestos han sido contados";
+                        }
                     }
                 }
                 else
                 {
-                    _formVisible = false;
-                    _allCompleted = true;
-                    _helperText = "No hay repuestos asignados";
+                    _formVisible = true;
+
+                    if (IsPreInventory)
+                    {
+                        _allCompleted = false;
+                        ResetForm();
+                        _currentStep = Step.WaitingLocation;
+                        _helperText = "Escanee ubicación...";
+                        _inputColor = Color.Default;
+                    }
+                    else
+                    {
+                        _allCompleted = true;
+                        _helperText = "No hay repuestos asignados";
+                    }
                 }
             }
             else
@@ -687,39 +717,72 @@
 
                 if (IsPreInventory)
                 {
-                    ResetForm();
-                    _currentStep = Step.WaitingLocation;
-                    _helperText = "Escanee ubicación...";
-                    _inputColor = Color.Default;
-                    _formVisible = true;
-                }
-                else if (IsFinalInventory || IsCyclic)
-                {
-                    // Marcado optimista: si el detalle procesado era el último pendiente
-                    // conocido, mostramos "Completado" sin esperar al GET (que puede
-                    // leer con NOLOCK antes del COMMIT del POST).
-                    if (!_isUnassignedMode && _pendingDetails.Count <= 1)
+                    _isProcessing = false;
+
+                    // Recargar pendientes (recontos reseteados) si los hay
+                    await LoadPendingDetails();
+
+                    // Si no hay pendientes → barrido libre
+                    if (!_pendingDetails.Any())
                     {
-                        _pendingDetails.Clear();
-                        _pendingCount = 0;
-                        _allCompleted = true;
-                        _formVisible = false;
-                        _currentStep = Step.Idle;
-                    }
-                    else
-                    {
+                        ResetForm();
+                        _currentStep = Step.WaitingLocation;
+                        _helperText = "Escanee ubicación...";
+                        _inputColor = Color.Default;
                         _formVisible = true;
                     }
 
-                    _isUnassignedMode = false;
+                    if (_codeField is not null && _formVisible)
+                    {
+                        await _codeField.FocusAsync();
+                    }
                 }
-
-                _isProcessing = false;
-                await OnClickRefresh();
-
-                if (_codeField is not null && _formVisible)
+                else if (IsFinalInventory || IsCyclic)
                 {
-                    await _codeField.FocusAsync();
+                    if (_isUnassignedMode)
+                    {
+                        // BOTÓN (+): resetear y volver al pendiente actual
+                        _isUnassignedMode = false;
+                        _formVisible = true;
+                        ResetForm();
+                        _currentStep = Step.Idle;
+
+                        // Recargar el pendiente actual (para que quede listo)
+                        if (_currentPendingIndex >= 0 && _currentPendingIndex < _pendingDetails.Count)
+                        {
+                            await LoadPendingDetail(_currentPendingIndex);
+                        }
+                        else
+                        {
+                            _isProcessing = false;
+                            await OnClickRefresh();
+                        }
+                    }
+                    else
+                    {
+                        // CONTEO NORMAL
+                        if (_pendingDetails.Count <= 1)
+                        {
+                            _pendingDetails.Clear();
+                            _pendingCount = 0;
+                            _allCompleted = true;
+                            _formVisible = false;
+                            _currentStep = Step.Idle;
+                            ResetForm();
+                        }
+                        else
+                        {
+                            _formVisible = true;
+                        }
+
+                        _isProcessing = false;
+                        await OnClickRefresh();
+                    }
+
+                    if (_codeField is not null && _formVisible)
+                    {
+                        await _codeField.FocusAsync();
+                    }
                 }
             }
             else
@@ -751,7 +814,6 @@
 
     private async Task OnClickRefresh()
     {
-        if (_isProcessing) return;
         try
         {
             _isProcessing = true;

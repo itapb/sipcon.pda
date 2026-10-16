@@ -2,8 +2,6 @@
 
 namespace Sipcon.Mobile.WebApp.Models
 {
-    // ==================== REQUEST MODELS ====================
-
     public class StockCountDetail
     {
         // Id = 0 o null → botón (+)
@@ -23,14 +21,13 @@ namespace Sipcon.Mobile.WebApp.Models
         public int? Quantity { get; set; }
     }
 
-    // ==================== RESPONSE MODELS ====================
 
     public class InventoryTypeOption
     {
         public string Tipo { get; set; } = string.Empty;            // 'FISICO' / 'CICLICO'
         public int IdInventoryCount { get; set; }
         public int IdCountType { get; set; }                        // 1 = Cíclico, 2 = Físico
-        public int IdStatus { get; set; }                           // 20 = preinventario, 6 = activo
+        public int IdStatus { get; set; }                           // 20 = preinventario, 6 = ACTIVO
         public string VDescription { get; set; } = string.Empty;
         public int TieneAsignacion { get; set; }                    // 1 = tiene, 0 = no
     }
