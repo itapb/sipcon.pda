@@ -26,15 +26,17 @@
             }
             @if (_ModuleNames.Contains("INVENTARIO-MOVIL-EMBALAJE"))
             {
-                <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Info" Style="background-color: var(--mud-palette-info-darken);" EndIcon="@Icons.Material.Filled.MoveToInbox" Href="mobile-packing" Disabled="@(UserTypeSelected is null)">Embalaje</MudButton>
+                <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Info" Style="background-color: var(--mud-palette-info);" EndIcon="@Icons.Material.Filled.MoveToInbox" Href="mobile-packing" Disabled="@(UserTypeSelected is null)">Embalaje</MudButton>
             }
             @if (_ModuleNames.Contains("INVENTARIO-MOVIL-DESPACHO")) 
             {
-                <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Warning" Style="background-color: var(--mud-palette-warning-lighten);" EndIcon="@Icons.Material.Filled.LocalShipping" Href="mobile-dispatch" Disabled="@(UserTypeSelected is null)">Despacho</MudButton>
+                <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Info" Style="background-color: var(--mud-palette-info-darken);" EndIcon="@Icons.Material.Filled.LocalShipping" Href="mobile-dispatch" Disabled="@(UserTypeSelected is null)">Despacho</MudButton>
             }
+     
+            <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Warning" Style="background-color: var(--mud-palette-warning-lighten);" EndIcon="@Icons.Material.Filled.ManageSearch" Href="mobile-packinglist" Disabled="@(UserTypeSelected is null)">Packing List</MudButton>
             
-            <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Warning" Style="background-color: var(--mud-palette-warning-darken);" EndIcon="@Icons.Material.Filled.ManageSearch" Href="mobile-packinglist" Disabled="@(UserTypeSelected is null)">Packing List</MudButton>
-            
+            <MudButton Class="pa-2 mud-text-align-center" Variant="Variant.Filled" Color="Color.Warning" Style="background-color: var(--mud-palette-warning);" EndIcon="@Icons.Material.Filled.BlurLinear" Href="mobile-stock-count-type" Disabled="@(UserTypeSelected is null)">Stock Count</MudButton>
+
         </MudStack>
     </MudPaper>
 </div>

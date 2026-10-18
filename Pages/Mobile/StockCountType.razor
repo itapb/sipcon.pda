@@ -1,0 +1,182 @@
+﻿@page "/mobile-stock-count-type"
+@using Sipcon.Mobile.WebApp.Layout
+@using Sipcon.Mobile.WebApp.Models
+@using MudBlazor
+@layout MobileLayout
+
+<div style="flex-shrink: 0;" class="pa-3 jpv1-dialog-body-background">
+    <MudPaper Elevation="2" Class="pa-3">
+        <MudGrid Spacing="3">
+            <MudItem xs="12">
+                <MudStack Row="false" StretchItems="StretchItems.Start" Justify="Justify.FlexEnd">
+                    <MudPaper Class="pa-2 mud-theme-info mud-typography-h6 d-flex justify-center align-center">
+                        SELECCIONE TIPO DE INVENTARIO
+                    </MudPaper>
+                </MudStack>
+            </MudItem>
+
+            @if (_loading)
+            {
+                <MudItem xs="12">
+                    <div class="d-flex justify-center align-center" style="height: 150px;">
+                        <MudProgressCircular Size="Size.Large" Color="Color.Primary" />
+                        <MudText Class="ml-3">Cargando opciones...</MudText>
+                    </div>
+                </MudItem>
+            }
+            else if (!_hasActiveInventory)
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="pa-4">
+                        <MudText Typo="Typo.h6" Class="text-center">
+                            No hay inventarios disponibles
+                        </MudText>
+                    </MudAlert>
+                </MudItem>
+            }
+            else
+            {
+                @foreach (var type in _inventoryTypes)
+                {
+                    <MudItem xs="12" sm="@(_inventoryTypes.Count > 1 ? 6 : 12)">
+                        <MudCard Class="pa-4" Elevation="3">
+                            <MudCardContent Class="text-center">
+                                <MudIcon Icon="@GetIconForType(type.IdCountType)" Size="Size.Large" Color="@GetColorForType(type.IdCountType)" />
+                                <MudText Typo="Typo.h5" Class="mt-2 font-weight-bold">@type.Tipo</MudText>
+
+                                <MudChip T="string" Color="@GetStatusColor(type.IdStatus)" Size="Size.Small" Class="mt-1">
+                                    <MudIcon Icon="@GetStatusIcon(type.IdStatus)" Size="Size.Small" />
+                                    @GetStatusText(type.IdStatus)
+                                </MudChip>
+
+                                @if (!string.IsNullOrEmpty(type.VDescription))
+                                {
+                                    <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">
+                                        @type.VDescription
+                                    </MudText>
+                                }
+
+                                <MudButton Variant="Variant.Filled"
+                                           Color="@GetColorForType(type.IdCountType)"
+                                           Class="mt-3"
+                                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                                           OnClick="@(() => SelectInventoryType(type))">
+                                    Iniciar
+                                </MudButton>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+            }
+
+            <MudItem xs="12">
+                <MudStack Row="true" Justify="Justify.Center">
+                    <MudFab Color="Color.Error"
+                            StartIcon="@Icons.Material.Filled.ArrowBack"
+                            Size="Size.Medium"
+                            Href="process-list" />
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</div>
+
+<style>
+    .mud-card {
+        cursor: pointer;
+        transition: transform 0.2s ease-in-out;
+    }
+
+        .mud-card:hover {
+            transform: scale(1.02);
+        }
+</style>
+
+@code {
+    [Inject] private UserSession Session { get; set; } = null!;
+    [Inject] private Repository.Auth.AuthenticationProviderJWT AuthenticationStateProvider { get; set; } = null!;
+    [Inject] private HttpClient Http { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = null!;
+    [Inject] private IDialogService DialogService { get; set; } = null!;
+
+    private bool _loading = true;
+    private bool _hasActiveInventory = false;
+    private List<InventoryTypeOption> _inventoryTypes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInventoryTypes();
+        await base.OnInitializedAsync();
+    }
+
+    private async Task LoadInventoryTypes()
+    {
+        try
+        {
+            _loading = true;
+            await AuthenticationStateProvider.RefresMobileStaticVariables();
+
+            var response = await Http.GetAsync($"api/StockCount/GetInventoryTypes?userId={Session.UserId}&supplierId={Session.SupplierId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<InventoryTypeOption>>>();
+                _inventoryTypes = result?.Data ?? new List<InventoryTypeOption>();
+                _hasActiveInventory = _inventoryTypes.Any();
+            }
+            else
+            {
+                _inventoryTypes = new List<InventoryTypeOption>();
+                _hasActiveInventory = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading inventory types: {ex.Message}");
+            _inventoryTypes = new List<InventoryTypeOption>();
+            _hasActiveInventory = false;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string GetIconForType(int countType)
+    {
+        // IDCOUNTTYPE = 2 → Físico, IDCOUNTTYPE = 1 → Cíclico
+        return countType == 2 ? Icons.Material.Filled.Inventory : Icons.Material.Filled.Repeat;
+    }
+
+    private Color GetColorForType(int countType)
+    {
+        return countType == 2 ? Color.Primary : Color.Secondary;
+    }
+
+    private string GetStatusText(int idEstatus)
+    {
+        return idEstatus == 20 ? "PRE-INVENTARIO" : "INVENTARIO";
+    }
+
+    private Color GetStatusColor(int idEstatus)
+    {
+        return idEstatus == 20 ? Color.Warning : Color.Success;
+    }
+
+    private string GetStatusIcon(int idEstatus)
+    {
+        return idEstatus == 20 ? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.CheckCircle;
+    }
+
+    private void SelectInventoryType(InventoryTypeOption type)
+    {
+        NavigationManager.NavigateTo(
+            $"/mobile-stock-count" +
+            $"?countType={type.IdCountType}" +
+            $"&typeName={type.Tipo}" +
+            $"&IdInventoryCount={type.IdInventoryCount}" +
+            $"&hasAssignment={type.TieneAsignacion}" +
+            $"&idStatus={type.IdStatus}"
+        );
+    }
+}
