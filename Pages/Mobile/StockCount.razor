@@ -13,22 +13,21 @@
                     <MudPaper Class="pa-2 mud-theme-info mud-typography-subtitle1">
                         TFI: #@IdInventoryCount
                     </MudPaper>
-                    @if (!IsPreInventory)
+
+                    @if (_pendingCount > 0)
                     {
-                        @if (_pendingCount > 0)
-                        {
-                            <MudPaper Class="pa-2 mud-theme-success mud-typography-caption">
-                                Pendientes: @_pendingCount
-                            </MudPaper>
-                        }
-                        else if (_allCompleted)
-                        {
-                            <MudPaper Class="pa-2 mud-theme-success mud-typography-caption d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
-                                Completado
-                            </MudPaper>
-                        }
+                        <MudPaper Class="pa-2 mud-theme-success mud-typography-caption">
+                            Pendientes: @_pendingCount
+                        </MudPaper>
                     }
+                    else if (_allCompleted)
+                    {
+                        <MudPaper Class="pa-2 mud-theme-success mud-typography-caption d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                            Completado
+                        </MudPaper>
+                    }
+
                 </MudStack>
             </MudItem>
 
@@ -69,6 +68,17 @@
                                   @bind-Value="_currentQuantity"
                                   Color="@(_quantityConfirmed ? Color.Success : Color.Default)">
                     </MudTextField>
+                </MudItem>
+
+                <!-- Observación -->
+                <MudItem xs="12">
+                <MudTextField T="string"
+                              Adornment="Adornment.Start"
+                              AdornmentText="Observación : "
+                              Margin="Margin.Dense"
+                              @bind-Value="_currentObservation"
+                             >
+                </MudTextField>
                 </MudItem>
 
                 <!-- Campo de escaneo -->
@@ -165,11 +175,13 @@
     private int? _currentPartId;
     private string? _currentPartCode;
     private int? _currentDetailId;
+    private string? _currentObservation;
 
     private bool _locationConfirmed = false;
     private bool _partConfirmed = false;
     private bool _quantityConfirmed = false;
     private bool _canProcess => _locationConfirmed && _partConfirmed && _quantityConfirmed;
+    private bool _observationConfirmed => !string.IsNullOrWhiteSpace(_currentObservation);
 
     private List<InventoryDetailResponse> _pendingDetails = new();
     private int _pendingCount = 0;
@@ -271,7 +283,7 @@
 
                         if (IsPreInventory)
                         {
-                            _allCompleted = false;
+                            _allCompleted = true;
                             ResetForm();
                             _currentStep = Step.WaitingLocation;
                             _helperText = "Escanee ubicación...";
@@ -290,7 +302,7 @@
 
                     if (IsPreInventory)
                     {
-                        _allCompleted = false;
+                        _allCompleted = true;
                         ResetForm();
                         _currentStep = Step.WaitingLocation;
                         _helperText = "Escanee ubicación...";
@@ -341,6 +353,7 @@
         _currentPartCode = detail.PartCode;
         _currentDetailId = detail.IdInventoryDetail;
         _currentQuantity = null;
+        _currentObservation = null;
 
         _locationConfirmed = false;
         _partConfirmed = false;
@@ -697,7 +710,8 @@
                 IdInventory = IdInventoryCount,
                 LocationCode = _currentLocationName ?? string.Empty,
                 PartCode = _currentPartCode ?? string.Empty,
-                Quantity = _currentQuantity
+                Quantity = _currentQuantity,
+                Observation = _currentObservation ?? string.Empty
             };
 
             var response = await Http.PostAsJsonAsync(
@@ -719,17 +733,32 @@
                 {
                     _isProcessing = false;
 
-                    // Recargar pendientes (recontos reseteados) si los hay
-                    await LoadPendingDetails();
-
-                    // Si no hay pendientes → barrido libre
-                    if (!_pendingDetails.Any())
+                    if (_pendingDetails.Count <= 1)
                     {
+                        _pendingDetails.Clear();
+                        _pendingCount = 0;
+                        _allCompleted = true;
                         ResetForm();
+
+                        // Mantenemos el formulario visible para barrido libre, pero con el contador en 0
                         _currentStep = Step.WaitingLocation;
                         _helperText = "Escanee ubicación...";
                         _inputColor = Color.Default;
                         _formVisible = true;
+                    }
+                    else
+                    {
+                        // Aún quedan pendientes, recargamos
+                        await LoadPendingDetails();
+
+                        if (!_pendingDetails.Any())
+                        {
+                            ResetForm();
+                            _currentStep = Step.WaitingLocation;
+                            _helperText = "Escanee ubicación...";
+                            _inputColor = Color.Default;
+                            _formVisible = true;
+                        }
                     }
 
                     if (_codeField is not null && _formVisible)
@@ -831,6 +860,7 @@
         _currentLocationName = null;
         _currentPartDescription = null;
         _currentQuantity = null;
+        _currentObservation = null;
         _currentLocationId = null;
         _currentPartId = null;
         _currentPartCode = null;
