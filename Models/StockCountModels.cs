@@ -19,6 +19,8 @@ namespace Sipcon.Mobile.WebApp.Models
 
         [Required]
         public int? Quantity { get; set; }
+
+        public string? Observation { get; set; }
     }
 
 
@@ -60,6 +62,7 @@ namespace Sipcon.Mobile.WebApp.Models
         public int? IQuantityOld { get; set; }
         public int? IQuantityNew { get; set; }
         public string? IForm { get; set; }
+        public string VObservation { get; set; } = string.Empty;
         public string LocationName { get; set; } = string.Empty;
         public string PartCode { get; set; } = string.Empty;
         public string PartDescription { get; set; } = string.Empty;
